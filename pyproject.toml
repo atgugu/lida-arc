@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lida"
+version = "1.0.0"
+description = "A systems-level Python implementation of the LIDA (Learning Intelligent Decision Agent) cognitive architecture"
+authors = [
+  {name = "Zo Computer (Zo)"},
+]
+readme = "README.md"
+requires-python = ">=3.11"
+# Core runtime deps
+dependencies = [
+  "numpy>=1.26",
+  "networkx>=3.2",
+  "pydantic>=2.7",
+  "rich>=13.7",
+]
+
+[project.optional-dependencies]
+full = [
+  "numpy>=1.26",
+  "networkx>=3.2",
+  "pydantic>=2.7",
+  "rich>=13.7",
+]
+
+dev = [
+  "pytest>=8.2",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.5",
+  "mypy>=1.10",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+lida = "lida.cli:main"
