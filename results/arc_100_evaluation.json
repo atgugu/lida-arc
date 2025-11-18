@@ -5,7 +5,7 @@
     "exact_matches": 11,
     "solve_rate": 0.22448979591836735,
     "average_accuracy": 0.24319727891156462,
-    "total_time": 107.64326810836792,
+    "total_time": 119.89105582237244,
     "predictions_stats": {
       "1": 13,
       "0": 36
@@ -17,7 +17,7 @@
     "exact_matches": 11,
     "solve_rate": 0.22448979591836735,
     "average_accuracy": 0.24319727891156462,
-    "total_time": 107.54317259788513,
+    "total_time": 121.9639675617218,
     "predictions_stats": {
       "1": 8,
       "2": 5,
