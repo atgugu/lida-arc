@@ -48,6 +48,7 @@ class ARCSolverConfig:
 
     # Multi-prediction strategy (ARC-AGI allows 2 predictions per test)
     max_predictions: int = 2  # Generate up to k diverse predictions
+    min_prediction_salience: float = 0.5  # Minimum salience to make a prediction
 
     # PAM spreading activation parameters
     pam_iterations: int = 5
@@ -187,47 +188,45 @@ class ARCCognitiveSolver:
                         self._debug(f"    Summary: {coalition.summary}")
                         self._debug(f"    Salience: {coalition.salience:.3f}")
 
-                # CRITICAL: Filter to only patterns that work on ALL training examples
-                # This ensures we only use patterns that truly generalize
-                validated_coalitions = []
-                for coalition in coalitions:
-                    # Find the corresponding hypothesis to check validation accuracy
-                    hyp = next((h for h in self.codelet_factory.hypotheses if h.hypothesis_id == coalition.id), None)
-                    if hyp and hyp.validation_accuracy == 1.0:
-                        validated_coalitions.append(coalition)
-                    elif hyp:
-                        if self.config.debug:
-                            self._debug(f"  ✗ Filtered out {coalition.id}: validation={hyp.validation_accuracy:.2f} < 1.0")
+                # SALIENCE-BASED SELECTION: Trust the salience mechanism
+                # (Salience already incorporates validation via: salience = 0.5 * initial + 0.5 * validation_accuracy)
+                # Sort by salience and select top-k patterns
+                sorted_coalitions = sorted(coalitions, key=lambda c: c.salience, reverse=True)
 
-                if self.config.debug and len(validated_coalitions) < len(coalitions):
-                    self._debug(f"  Filtered {len(coalitions)} → {len(validated_coalitions)} coalitions (requiring 100% validation)")
+                # MULTI-PREDICTION STRATEGY: Take top-k candidates
+                # ARC-AGI allows 2 predictions per test
+                top_k = sorted_coalitions[:self.config.max_predictions]
 
-                coalitions = validated_coalitions
+                # QUALITY THRESHOLD: Only make predictions if salience meets minimum threshold
+                # This prevents predictions with very low confidence
+                self.winning_coalitions = [
+                    coal for coal in top_k
+                    if coal.salience >= self.config.min_prediction_salience
+                ]
 
-                # Compete in global workspace (traditional single winner)
-                winner, scores = self.global_workspace.compete(coalitions)
+                if self.config.debug:
+                    self._debug(f"  Selected {len(self.winning_coalitions)}/{len(top_k)} patterns above salience threshold {self.config.min_prediction_salience}")
+                    for i, coal in enumerate(self.winning_coalitions):
+                        hyp = next((h for h in self.codelet_factory.hypotheses if h.hypothesis_id == coal.id), None)
+                        val_acc = hyp.validation_accuracy if hyp else 0.0
+                        self._debug(f"    {i+1}. {coal.id}: {coal.summary} (salience={coal.salience:.3f}, validation={val_acc:.2f})")
 
-                # MULTI-PREDICTION STRATEGY: Select top-k diverse patterns
-                # ARC-AGI allows 2 predictions per test - we want the top-k patterns by salience
-                # that produce DIFFERENT test outputs
-                if self.config.max_predictions > 1 and len(coalitions) > 1:
-                    # Sort coalitions by salience (descending)
-                    sorted_coalitions = sorted(coalitions, key=lambda c: c.salience, reverse=True)
+                    # Show filtered patterns
+                    filtered = [coal for coal in top_k if coal.salience < self.config.min_prediction_salience]
+                    if filtered:
+                        self._debug(f"  Filtered {len(filtered)} patterns below threshold:")
+                        for coal in filtered:
+                            self._debug(f"    ✗ {coal.id}: salience={coal.salience:.3f} < {self.config.min_prediction_salience}")
 
-                    # Take top-k candidates
-                    self.winning_coalitions = sorted_coalitions[:self.config.max_predictions]
+                # Primary winner for backward compatibility
+                winner = self.winning_coalitions[0] if self.winning_coalitions else None
+                self.winning_coalition_id = winner.id if winner else None
 
-                    if self.config.debug:
-                        self._debug(f"  Multi-prediction mode: selected {len(self.winning_coalitions)} top patterns")
-                        for i, coal in enumerate(self.winning_coalitions):
-                            self._debug(f"    {i+1}. {coal.id}: {coal.summary} (salience={coal.salience:.3f})")
-
-                    # Primary winner for backward compatibility
-                    self.winning_coalition_id = self.winning_coalitions[0].id if self.winning_coalitions else None
+                # Compute scores for workspace broadcast
+                if self.winning_coalitions:
+                    scores = [(c.id, c.salience) for c in sorted_coalitions]
                 else:
-                    # Single prediction mode (traditional)
-                    self.winning_coalitions = [winner] if winner else []
-                    self.winning_coalition_id = winner.id if winner else None
+                    scores = []
 
                 if winner:
                     self._log(f"Attention: Winner = {winner.summary} (salience={winner.salience:.3f})")
