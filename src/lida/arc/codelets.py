@@ -270,27 +270,76 @@ class ARCCodeletFactory:
                 total = len(self.demonstrations)
 
                 for demo in self.demonstrations:
-                    # Apply pattern
+                    # Apply pattern based on type
                     result = demo.input
                     try:
-                        for op_name in hyp.pattern.grid_operations:
-                            prim = self.primitives.get(op_name)
+                        if hyp.pattern.grid_operations:
+                            # Grid-level operations
+                            for op_name in hyp.pattern.grid_operations:
+                                prim = self.primitives.get(op_name)
 
-                            if op_name == 'recolor':
-                                # CRITICAL: For multi-op sequences, dynamically infer color mapping
-                                if len(hyp.pattern.grid_operations) > 1:
-                                    # Infer mapping from current result to expected output
-                                    color_mapping = self._infer_color_mapping(result, demo.output)
-                                    if not color_mapping:
-                                        raise ValueError("Cannot infer color mapping")
-                                    result = prim.execute(result, color_mapping)
-                                elif hyp.pattern.color_mapping:
-                                    # Single recolor: use stored mapping
-                                    result = prim.execute(result, hyp.pattern.color_mapping)
+                                if op_name == 'recolor':
+                                    # CRITICAL: For multi-op sequences, dynamically infer color mapping
+                                    if len(hyp.pattern.grid_operations) > 1:
+                                        # Infer mapping from current result to expected output
+                                        color_mapping = self._infer_color_mapping(result, demo.output)
+                                        if not color_mapping:
+                                            raise ValueError("Cannot infer color mapping")
+                                        result = prim.execute(result, color_mapping)
+                                    elif hyp.pattern.color_mapping:
+                                        # Single recolor: use stored mapping
+                                        result = prim.execute(result, hyp.pattern.color_mapping)
+                                    else:
+                                        raise ValueError("No color mapping available")
                                 else:
-                                    raise ValueError("No color mapping available")
-                            else:
-                                result = prim.execute(result)
+                                    result = prim.execute(result)
+
+                        elif hyp.pattern.object_transformations:
+                            # Object-level transformations
+                            detect_prim = self.primitives.get('detect_objects')
+                            if not detect_prim:
+                                raise ValueError("detect_objects primitive not found")
+
+                            input_objects = detect_prim.execute(demo.input)
+
+                            # Apply transformations
+                            output_objects = []
+                            for i, obj in enumerate(input_objects):
+                                if i < len(hyp.pattern.object_transformations):
+                                    transform = hyp.pattern.object_transformations[i]
+                                    transformed_obj = obj
+
+                                    if 'color_delta' in transform:
+                                        old_color, new_color = transform['color_delta']
+                                        if transformed_obj.color == old_color:
+                                            recolor_prim = self.primitives.get('recolor_object')
+                                            if recolor_prim:
+                                                transformed_obj = recolor_prim.execute(transformed_obj, new_color)
+
+                                    if 'position_delta' in transform:
+                                        delta_r, delta_c = transform['position_delta']
+                                        move_prim = self.primitives.get('move_object')
+                                        if move_prim:
+                                            transformed_obj = move_prim.execute(transformed_obj, int(delta_r), int(delta_c))
+
+                                    if 'size_delta' in transform and obj.size > 0:
+                                        size_delta = transform['size_delta']
+                                        new_size = obj.size + size_delta
+                                        if new_size > 0:
+                                            ratio = new_size / obj.size
+                                            if abs(ratio - 1.0) > 0.01:
+                                                scale_prim = self.primitives.get('scale_object')
+                                                if scale_prim:
+                                                    transformed_obj = scale_prim.execute(transformed_obj, ratio)
+
+                                    output_objects.append(transformed_obj)
+                                else:
+                                    output_objects.append(obj)
+
+                            # Render back to grid
+                            render_prim = self.primitives.get('render_objects')
+                            if render_prim:
+                                result = render_prim.execute(output_objects, len(demo.input[0]), len(demo.input))
 
                         if result == demo.output:
                             correct += 1
@@ -386,33 +435,111 @@ class ARCCodeletFactory:
                 return
 
             self._debug(f"    Test input shape: {len(self.test_input)}x{len(self.test_input[0]) if self.test_input else 0}")
-            self._debug(f"    Applying {len(self.winning_pattern.grid_operations)} operations")
+            self._debug(f"    Pattern type: {self.winning_pattern.transformation_type}")
 
             result = self.test_input
 
             try:
-                # Apply pattern operations
-                for i, op_name in enumerate(self.winning_pattern.grid_operations):
-                    self._debug(f"      Step {i+1}/{len(self.winning_pattern.grid_operations)}: {op_name}")
+                # Branch based on pattern type
+                if self.winning_pattern.grid_operations:
+                    # GRID-LEVEL OPERATIONS
+                    self._debug(f"    Applying {len(self.winning_pattern.grid_operations)} grid operations")
 
-                    prim = self.primitives.get(op_name)
-                    if not prim:
-                        self._debug(f"        ✗ Primitive '{op_name}' not found")
-                        raise ValueError(f"Primitive '{op_name}' not found")
+                    for i, op_name in enumerate(self.winning_pattern.grid_operations):
+                        self._debug(f"      Step {i+1}/{len(self.winning_pattern.grid_operations)}: {op_name}")
 
-                    if op_name == 'recolor':
-                        # CRITICAL: For multi-operation sequences, use stored mapping as template
-                        # The mapping structure should generalize even if specific colors differ
-                        if self.winning_pattern.color_mapping:
-                            self._debug(f"        Applying recolor with mapping: {self.winning_pattern.color_mapping}")
-                            result = prim.execute(result, self.winning_pattern.color_mapping)
+                        prim = self.primitives.get(op_name)
+                        if not prim:
+                            self._debug(f"        ✗ Primitive '{op_name}' not found")
+                            raise ValueError(f"Primitive '{op_name}' not found")
+
+                        if op_name == 'recolor':
+                            # CRITICAL: For multi-operation sequences, use stored mapping as template
+                            if self.winning_pattern.color_mapping:
+                                self._debug(f"        Applying recolor with mapping: {self.winning_pattern.color_mapping}")
+                                result = prim.execute(result, self.winning_pattern.color_mapping)
+                            else:
+                                self._debug(f"        ✗ Recolor requires color mapping")
+                                raise ValueError("Recolor operation requires color mapping")
                         else:
-                            self._debug(f"        ✗ Recolor requires color mapping")
-                            raise ValueError("Recolor operation requires color mapping")
-                    else:
-                        result = prim.execute(result)
+                            result = prim.execute(result)
 
-                    self._debug(f"        ✓ Result shape: {len(result)}x{len(result[0]) if result else 0}")
+                        self._debug(f"        ✓ Result shape: {len(result)}x{len(result[0]) if result else 0}")
+
+                elif self.winning_pattern.object_transformations:
+                    # OBJECT-LEVEL TRANSFORMATIONS
+                    self._debug(f"    Applying object-level transformations")
+
+                    # Extract objects from test input
+                    detect_prim = self.primitives.get('detect_objects')
+                    if not detect_prim:
+                        raise ValueError("detect_objects primitive not found")
+
+                    input_objects = detect_prim.execute(self.test_input)
+                    self._debug(f"      Detected {len(input_objects)} objects in test input")
+
+                    # Apply transformations to each object
+                    output_objects = []
+                    for i, obj in enumerate(input_objects):
+                        if i < len(self.winning_pattern.object_transformations):
+                            transform = self.winning_pattern.object_transformations[i]
+                            self._debug(f"      Applying transform to object {i}: {transform}")
+
+                            transformed_obj = obj
+
+                            # Apply color change if needed
+                            if 'color_delta' in transform:
+                                old_color, new_color = transform['color_delta']
+                                if transformed_obj.color == old_color:
+                                    recolor_prim = self.primitives.get('recolor_object')
+                                    if recolor_prim:
+                                        transformed_obj = recolor_prim.execute(transformed_obj, new_color)
+                                        self._debug(f"        Recolored: {old_color} → {new_color}")
+
+                            # Apply position change if needed
+                            if 'position_delta' in transform:
+                                delta_r, delta_c = transform['position_delta']
+                                if abs(delta_r) > 0 or abs(delta_c) > 0:
+                                    move_prim = self.primitives.get('move_object')
+                                    if move_prim:
+                                        transformed_obj = move_prim.execute(transformed_obj, delta_r, delta_c)
+                                        self._debug(f"        Moved: ({delta_r}, {delta_c})")
+
+                            # Apply size change if needed
+                            if 'size_delta' in transform and obj.size > 0:
+                                size_delta = transform['size_delta']
+                                new_size = obj.size + size_delta
+                                if new_size > 0:
+                                    ratio = new_size / obj.size
+                                    if abs(ratio - 1.0) > 0.01:
+                                        scale_prim = self.primitives.get('scale_object')
+                                        if scale_prim:
+                                            transformed_obj = scale_prim.execute(transformed_obj, ratio)
+                                            self._debug(f"        Scaled: {ratio:.2f}x ({obj.size} → {new_size} pixels)")
+
+                            output_objects.append(transformed_obj)
+                        else:
+                            output_objects.append(obj)
+
+                    # Render objects back to grid
+                    render_prim = self.primitives.get('render_objects')
+                    if not render_prim:
+                        raise ValueError("render_objects primitive not found")
+
+                    output_height = len(self.test_input)
+                    output_width = len(self.test_input[0]) if self.test_input else 0
+                    result = render_prim.execute(output_objects, output_width, output_height)
+                    self._debug(f"      Rendered {len(output_objects)} objects to grid")
+
+                elif self.winning_pattern.pixel_mapping:
+                    # PIXEL-LEVEL MAPPING
+                    self._debug(f"    Applying pixel-level mapping")
+                    # TODO: Implement pixel mapping application
+                    raise NotImplementedError("Pixel-level mapping not yet implemented")
+
+                else:
+                    self._debug(f"    ⚠ Pattern has no executable operations")
+                    raise ValueError("Pattern has no grid_operations, object_transformations, or pixel_mapping")
 
                 self.final_output = result
                 self._debug(f"    ✓ Pattern applied successfully")
