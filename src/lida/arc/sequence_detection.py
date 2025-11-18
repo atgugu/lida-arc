@@ -134,21 +134,21 @@ class SequencePruner:
         2. Lower distance to target preferred
         3. Shorter sequences preferred (tie-breaker)
         4. Higher confidence preferred (tie-breaker)
+
+        IMPORTANT: When finding all sequences, we keep both exact matches AND
+        promising non-matches to continue exploring longer sequences.
         """
         if len(candidates) <= beam_width:
             return candidates
 
-        # Always keep exact matches
-        exact_matches = [c for c in candidates if c.distance_to_target == 0]
-        if exact_matches:
-            return exact_matches[:beam_width]
-
-        # Sort by: distance (asc), sequence length (asc), confidence (desc)
+        # Sort all candidates by quality
+        # Exact matches (distance=0) will naturally sort to the top
         sorted_candidates = sorted(
             candidates,
             key=lambda c: (c.distance_to_target, len(c.sequence), -c.confidence)
         )
 
+        # Keep top beam_width candidates (includes both matches and near-matches)
         return sorted_candidates[:beam_width]
 
 
@@ -346,15 +346,34 @@ class SequenceDetector:
         )]
 
         # Iterative deepening - collect all exact matches
+        debug = False  # Set to True for debugging
         for depth in range(1, self.max_depth + 1):
+            if debug:
+                print(f"[find_all_sequences] Depth {depth}: Starting with {len(candidates)} candidates")
+
             new_candidates = []
 
-            for candidate in candidates:
-                # Don't extend candidates that already match perfectly
-                # (extending a perfect match makes no sense)
-                if candidate.distance_to_target == 0:
-                    continue
+            # IMPORTANT: We need to explore from the INITIAL state at each depth,
+            # not just extend existing candidates. This ensures we find all sequences.
+            # For example, we want to find both ['recolor'] and ['rotate_90', 'recolor']
 
+            # Start fresh from input grid for each depth search
+            if depth == 1:
+                # Depth 1: try all single operations
+                base_candidates = [SequenceCandidate([], input_grid, GridDistance.compute(input_grid, output_grid), 1.0)]
+            else:
+                # Depth 2+: extend candidates from previous depth that haven't matched yet
+                # But also keep exact matches to prevent losing them
+                base_candidates = [c for c in candidates if c.distance_to_target > 0]
+                if debug:
+                    print(f"[find_all_sequences]   Filtered to {len(base_candidates)} non-matching candidates")
+                # If all candidates matched, we're done exploring
+                if not base_candidates:
+                    if debug:
+                        print(f"[find_all_sequences]   All candidates matched - stopping search")
+                    break
+
+            for candidate in base_candidates:
                 for prim_name in self.primitives.get_all_names():
                     extended_sequence = candidate.sequence + [prim_name]
 
@@ -398,17 +417,26 @@ class SequenceDetector:
                         continue
 
             if not new_candidates:
+                if debug:
+                    print(f"[find_all_sequences]   No new candidates generated - stopping")
                 break
 
+            if debug:
+                print(f"[find_all_sequences]   Generated {len(new_candidates)} new candidates")
+                print(f"[find_all_sequences]   Exact matches so far: {len(all_exact_matches)}")
+
             candidates = self.pruner.prune_beam(new_candidates, self.beam_width)
+
+            if debug:
+                print(f"[find_all_sequences]   After pruning: {len(candidates)} candidates kept")
 
         # Sort by length (prefer simpler explanations first)
         all_exact_matches.sort(key=len)
 
         # Debug output
-        if False:  # Set to True to debug
+        if False:  # Set to True for debugging
             print(f"[find_all_sequences] Returning {len(all_exact_matches)} sequences")
-            for seq in all_exact_matches[:5]:
+            for seq in all_exact_matches[:10]:
                 print(f"[find_all_sequences]   - {seq}")
 
         return all_exact_matches

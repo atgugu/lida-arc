@@ -182,6 +182,23 @@ class ARCCognitiveSolver:
                         self._debug(f"    Summary: {coalition.summary}")
                         self._debug(f"    Salience: {coalition.salience:.3f}")
 
+                # CRITICAL: Filter to only patterns that work on ALL training examples
+                # This ensures we only use patterns that truly generalize
+                validated_coalitions = []
+                for coalition in coalitions:
+                    # Find the corresponding hypothesis to check validation accuracy
+                    hyp = next((h for h in self.codelet_factory.hypotheses if h.hypothesis_id == coalition.id), None)
+                    if hyp and hyp.validation_accuracy == 1.0:
+                        validated_coalitions.append(coalition)
+                    elif hyp:
+                        if self.config.debug:
+                            self._debug(f"  ✗ Filtered out {coalition.id}: validation={hyp.validation_accuracy:.2f} < 1.0")
+
+                if self.config.debug and len(validated_coalitions) < len(coalitions):
+                    self._debug(f"  Filtered {len(coalitions)} → {len(validated_coalitions)} coalitions (requiring 100% validation)")
+
+                coalitions = validated_coalitions
+
                 # Compete in global workspace
                 winner, scores = self.global_workspace.compete(coalitions)
 

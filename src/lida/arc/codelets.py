@@ -362,9 +362,15 @@ class ARCCodeletFactory:
                         self._debug(f"        ✗ Primitive '{op_name}' not found")
                         raise ValueError(f"Primitive '{op_name}' not found")
 
-                    if op_name == 'recolor' and self.winning_pattern.color_mapping:
-                        self._debug(f"        Applying recolor with mapping: {self.winning_pattern.color_mapping}")
-                        result = prim.execute(result, self.winning_pattern.color_mapping)
+                    if op_name == 'recolor':
+                        # CRITICAL: For multi-operation sequences, use stored mapping as template
+                        # The mapping structure should generalize even if specific colors differ
+                        if self.winning_pattern.color_mapping:
+                            self._debug(f"        Applying recolor with mapping: {self.winning_pattern.color_mapping}")
+                            result = prim.execute(result, self.winning_pattern.color_mapping)
+                        else:
+                            self._debug(f"        ✗ Recolor requires color mapping")
+                            raise ValueError("Recolor operation requires color mapping")
                     else:
                         result = prim.execute(result)
 

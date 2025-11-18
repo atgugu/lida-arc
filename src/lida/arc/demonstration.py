@@ -100,8 +100,9 @@ class DemonstrationAnalyzer:
         self.primitives = primitive_library
         self.object_extractor = ObjectExtractor()
         self.grid_analyzer = GridAnalyzer()
-        # Sequence detector for composite operations (depth-2 with beam search)
-        self.sequence_detector = SequenceDetector(primitive_library, max_depth=3, beam_width=5)
+        # Sequence detector for composite operations (depth-3 with beam search)
+        # Larger beam width ensures we find more sequence variants
+        self.sequence_detector = SequenceDetector(primitive_library, max_depth=3, beam_width=10)
 
     def analyze_pair(self, grid_pair: GridPair, demo_index: int = 0) -> List[TransformationPattern]:
         """Extract all possible transformation patterns from a single demo pair.
@@ -270,10 +271,12 @@ class DemonstrationAnalyzer:
             all_sequences = self.sequence_detector.find_all_sequences(input_grid, output_grid, color_map)
 
             # Debug: print what was found
-            if False:  # Set to True to debug
+            if False:  # Set to True for debugging
                 print(f"[DemoAnalyzer] find_all_sequences returned {len(all_sequences)} sequences")
-                for seq in all_sequences[:5]:
+                for seq in all_sequences[:10]:
                     print(f"[DemoAnalyzer]   - {seq}")
+                print(f"[DemoAnalyzer] Before loop: {len(patterns)} existing patterns")
+                print(f"[DemoAnalyzer] color_map={color_map}")
 
             # Add sequences with 2+ operations as alternative hypotheses
             # (single operations are already tried above)
@@ -298,6 +301,12 @@ class DemonstrationAnalyzer:
                     # Limit to top 3 sequence hypotheses to avoid explosion
                     if seq_idx >= 2:
                         break
+
+            # Debug: show what was added
+            if False:  # Set to True for debugging
+                print(f"[DemoAnalyzer] After loop: {len(patterns)} total patterns")
+                for p in patterns:
+                    print(f"[DemoAnalyzer]   - {p.pattern_id}: {p.grid_operations}")
 
         except Exception as e:
             # Sequence detection failed, log the error
@@ -505,6 +514,7 @@ class DemonstrationAnalyzer:
                       input_grid: List[List[int]],
                       expected_output: List[List[int]]) -> bool:
         """Test if a pattern produces expected output from input."""
+        debug = False  # Set to True for debugging
         try:
             result = input_grid
 
@@ -512,16 +522,49 @@ class DemonstrationAnalyzer:
             for op_name in pattern.grid_operations:
                 prim = self.primitives.get(op_name)
                 if not prim:
+                    if debug:
+                        print(f"[_apply_pattern] Primitive '{op_name}' not found")
                     return False
 
                 # Handle operations with parameters
-                if op_name == 'recolor' and pattern.color_mapping:
-                    result = prim.execute(result, pattern.color_mapping)
+                if op_name == 'recolor':
+                    # CRITICAL: For sequences, dynamically infer color mapping from current state
+                    # This handles cases like ['rotate_90', 'recolor'] where the mapping changes after rotation
+                    if len(pattern.grid_operations) > 1:
+                        # Multi-operation sequence: infer mapping from current result to expected output
+                        if debug:
+                            print(f"[_apply_pattern]   Before recolor: result={result}")
+                        color_mapping = self._infer_color_mapping(result, expected_output)
+                        if debug:
+                            print(f"[_apply_pattern]   Sequence {pattern.grid_operations}: inferred mapping {color_mapping}")
+                        if not color_mapping:
+                            if debug:
+                                print(f"[_apply_pattern]   Failed to infer color mapping")
+                            return False
+                        result = prim.execute(result, color_mapping)
+                        if debug:
+                            print(f"[_apply_pattern]   After recolor: result={result}")
+                    elif pattern.color_mapping:
+                        # Single recolor operation: use stored mapping
+                        result = prim.execute(result, pattern.color_mapping)
+                    else:
+                        if debug:
+                            print(f"[_apply_pattern] No color mapping available")
+                        return False
                 else:
+                    if debug:
+                        print(f"[_apply_pattern]   Applying {op_name}: before={result}")
                     result = prim.execute(result)
+                    if debug:
+                        print(f"[_apply_pattern]   After {op_name}: result={result}")
 
-            return self._grids_equal(result, expected_output)
-        except:
+            matches = self._grids_equal(result, expected_output)
+            if debug and not matches:
+                print(f"[_apply_pattern] Result {result} != expected {expected_output}")
+            return matches
+        except Exception as e:
+            if debug:
+                print(f"[_apply_pattern] Exception: {e}")
             return False
 
     def _pattern_signature(self, pattern: TransformationPattern) -> str:
