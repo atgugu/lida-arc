@@ -573,6 +573,398 @@ class FillBackgroundPrimitive(Primitive):
 
 
 # =============================================================================
+# OBJECT-BASED PRIMITIVES
+# =============================================================================
+
+class RenderObjectsPrimitive(Primitive):
+    """Convert list of GridObjects back to a grid."""
+
+    def __init__(self):
+        super().__init__('render_objects', 'object_manipulation')
+
+    def execute(self, objects: List[GridObject],
+                width: int, height: int,
+                background_color: int = 0) -> List[List[int]]:
+        """Render objects onto a grid.
+
+        Args:
+            objects: List of GridObjects to render
+            width: Grid width
+            height: Grid height
+            background_color: Background fill color
+
+        Returns:
+            Rendered grid
+        """
+        # Create blank grid
+        grid = [[background_color for _ in range(width)] for _ in range(height)]
+
+        # Render each object
+        for obj in objects:
+            for r, c in obj.pixels:
+                if 0 <= r < height and 0 <= c < width:
+                    grid[r][c] = obj.color
+
+        return grid
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'object_manipulation': 1.0,
+            'rendering': 1.0,
+            'synthesis': 1.0,
+        }
+
+
+class MoveObjectPrimitive(Primitive):
+    """Translate an object to a new position."""
+
+    def __init__(self):
+        super().__init__('move_object', 'object_manipulation')
+
+    def execute(self, obj: GridObject, delta_r: int, delta_c: int) -> GridObject:
+        """Move object by delta.
+
+        Args:
+            obj: Object to move
+            delta_r: Row offset
+            delta_c: Column offset
+
+        Returns:
+            New GridObject at translated position
+        """
+        new_pixels = frozenset((r + delta_r, c + delta_c) for r, c in obj.pixels)
+        min_r, min_c, max_r, max_c = obj.bounding_box
+        new_bbox = (min_r + delta_r, min_c + delta_c,
+                    max_r + delta_r, max_c + delta_c)
+
+        return GridObject(
+            object_id=f"{obj.object_id}_moved",
+            pixels=new_pixels,
+            color=obj.color,
+            bounding_box=new_bbox
+        )
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'object_manipulation': 1.0,
+            'spatial': 1.0,
+            'translation': 1.0,
+        }
+
+
+class ScaleObjectPrimitive(Primitive):
+    """Scale an object by a factor."""
+
+    def __init__(self):
+        super().__init__('scale_object', 'object_manipulation')
+
+    def execute(self, obj: GridObject, scale_factor: float) -> GridObject:
+        """Scale object.
+
+        Args:
+            obj: Object to scale
+            scale_factor: Scaling factor (e.g., 2.0 for 2x, 0.5 for half)
+
+        Returns:
+            New GridObject at scaled size
+        """
+        if scale_factor == 1.0:
+            return obj
+
+        min_r, min_c, _, _ = obj.bounding_box
+        centroid_r, centroid_c = obj.centroid
+
+        # Scale relative to centroid
+        new_pixels = set()
+        for r, c in obj.pixels:
+            rel_r = (r - centroid_r) * scale_factor
+            rel_c = (c - centroid_c) * scale_factor
+            new_r = int(round(centroid_r + rel_r))
+            new_c = int(round(centroid_c + rel_c))
+            new_pixels.add((new_r, new_c))
+
+        if not new_pixels:
+            return obj
+
+        new_pixels = frozenset(new_pixels)
+
+        # Compute new bounding box
+        rows = [p[0] for p in new_pixels]
+        cols = [p[1] for p in new_pixels]
+        new_bbox = (min(rows), min(cols), max(rows), max(cols))
+
+        return GridObject(
+            object_id=f"{obj.object_id}_scaled",
+            pixels=new_pixels,
+            color=obj.color,
+            bounding_box=new_bbox
+        )
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'object_manipulation': 1.0,
+            'geometric': 1.0,
+            'scaling': 1.0,
+        }
+
+
+class ReplicateObjectPrimitive(Primitive):
+    """Create N copies of an object."""
+
+    def __init__(self):
+        super().__init__('replicate_object', 'object_manipulation')
+
+    def execute(self, obj: GridObject, count: int,
+                spacing_r: int = 0, spacing_c: int = 0) -> List[GridObject]:
+        """Replicate object with spacing.
+
+        Args:
+            obj: Object to replicate
+            count: Number of copies (including original)
+            spacing_r: Row spacing between copies
+            spacing_c: Column spacing between copies
+
+        Returns:
+            List of GridObjects (original + copies)
+        """
+        copies = [obj]
+
+        for i in range(1, count):
+            delta_r = i * (obj.height + spacing_r)
+            delta_c = i * (obj.width + spacing_c)
+
+            new_pixels = frozenset((r + delta_r, c + delta_c) for r, c in obj.pixels)
+            min_r, min_c, max_r, max_c = obj.bounding_box
+            new_bbox = (min_r + delta_r, min_c + delta_c,
+                        max_r + delta_r, max_c + delta_c)
+
+            copy = GridObject(
+                object_id=f"{obj.object_id}_copy{i}",
+                pixels=new_pixels,
+                color=obj.color,
+                bounding_box=new_bbox
+            )
+            copies.append(copy)
+
+        return copies
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'object_manipulation': 1.0,
+            'replication': 1.0,
+            'pattern_generation': 1.0,
+        }
+
+
+class RecolorObjectPrimitive(Primitive):
+    """Change an object's color."""
+
+    def __init__(self):
+        super().__init__('recolor_object', 'object_manipulation')
+
+    def execute(self, obj: GridObject, new_color: int) -> GridObject:
+        """Change object color.
+
+        Args:
+            obj: Object to recolor
+            new_color: New color value (0-9)
+
+        Returns:
+            New GridObject with updated color
+        """
+        return GridObject(
+            object_id=f"{obj.object_id}_recolored",
+            pixels=obj.pixels,
+            color=new_color,
+            bounding_box=obj.bounding_box
+        )
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'object_manipulation': 1.0,
+            'color_based': 1.0,
+            'transformation': 1.0,
+        }
+
+
+# =============================================================================
+# SIZE/SHAPE CHANGE PRIMITIVES
+# =============================================================================
+
+class ScaleGridPrimitive(Primitive):
+    """Scale entire grid up or down."""
+
+    def __init__(self):
+        super().__init__('scale_grid', 'manipulation')
+
+    def execute(self, grid: List[List[int]], scale_factor: float) -> List[List[int]]:
+        """Scale grid by factor.
+
+        Args:
+            grid: Input grid
+            scale_factor: Scaling factor (e.g., 2.0 for 2x, 0.5 for half)
+
+        Returns:
+            Scaled grid
+        """
+        if not grid or not grid[0] or scale_factor == 1.0:
+            return grid
+
+        old_height = len(grid)
+        old_width = len(grid[0])
+
+        new_height = max(1, int(round(old_height * scale_factor)))
+        new_width = max(1, int(round(old_width * scale_factor)))
+
+        # Nearest-neighbor sampling
+        scaled = []
+        for r in range(new_height):
+            row = []
+            src_r = min(int(r / scale_factor), old_height - 1)
+            for c in range(new_width):
+                src_c = min(int(c / scale_factor), old_width - 1)
+                row.append(grid[src_r][src_c])
+            scaled.append(row)
+
+        return scaled
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'manipulation': 1.0,
+            'geometric': 1.0,
+            'scaling': 1.0,
+            'size_change': 1.0,
+        }
+
+
+class AutoCropPrimitive(Primitive):
+    """Crop grid to minimal bounding box containing non-background pixels."""
+
+    def __init__(self, background_color: int = 0):
+        super().__init__('auto_crop', 'manipulation')
+        self.background_color = background_color
+
+    def execute(self, grid: List[List[int]]) -> List[List[int]]:
+        """Auto-crop to content.
+
+        Args:
+            grid: Input grid
+
+        Returns:
+            Cropped grid containing all non-background pixels
+        """
+        if not grid or not grid[0]:
+            return grid
+
+        height = len(grid)
+        width = len(grid[0])
+
+        # Find bounding box of non-background
+        min_r, max_r = height, -1
+        min_c, max_c = width, -1
+
+        for r in range(height):
+            for c in range(width):
+                if grid[r][c] != self.background_color:
+                    min_r = min(min_r, r)
+                    max_r = max(max_r, r)
+                    min_c = min(min_c, c)
+                    max_c = max(max_c, c)
+
+        # If no content found, return original
+        if max_r < 0:
+            return grid
+
+        # Crop to bounding box
+        cropped = []
+        for r in range(min_r, max_r + 1):
+            row = [grid[r][c] for c in range(min_c, max_c + 1)]
+            cropped.append(row)
+
+        return cropped
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'manipulation': 1.0,
+            'spatial': 1.0,
+            'cropping': 1.0,
+            'size_change': 1.0,
+        }
+
+
+class ResizeToTargetPrimitive(Primitive):
+    """Resize grid to match target dimensions."""
+
+    def __init__(self):
+        super().__init__('resize_to_target', 'manipulation')
+
+    def execute(self, grid: List[List[int]],
+                target_height: int, target_width: int,
+                fill_color: int = 0,
+                align: str = 'center') -> List[List[int]]:
+        """Resize grid to target dimensions.
+
+        Args:
+            grid: Input grid
+            target_height: Target height
+            target_width: Target width
+            fill_color: Color for padding
+            align: 'center', 'top-left', 'top-right', 'bottom-left', 'bottom-right'
+
+        Returns:
+            Resized grid
+        """
+        if not grid or not grid[0]:
+            return [[fill_color] * target_width for _ in range(target_height)]
+
+        current_height = len(grid)
+        current_width = len(grid[0])
+
+        # If same size, return copy
+        if current_height == target_height and current_width == target_width:
+            return [row[:] for row in grid]
+
+        # Create target grid filled with fill_color
+        result = [[fill_color for _ in range(target_width)] for _ in range(target_height)]
+
+        # Compute offset based on alignment
+        if align == 'center':
+            offset_r = (target_height - current_height) // 2
+            offset_c = (target_width - current_width) // 2
+        elif align == 'top-left':
+            offset_r, offset_c = 0, 0
+        elif align == 'top-right':
+            offset_r = 0
+            offset_c = target_width - current_width
+        elif align == 'bottom-left':
+            offset_r = target_height - current_height
+            offset_c = 0
+        elif align == 'bottom-right':
+            offset_r = target_height - current_height
+            offset_c = target_width - current_width
+        else:
+            offset_r, offset_c = 0, 0
+
+        # Copy grid content to target
+        for r in range(current_height):
+            for c in range(current_width):
+                target_r = offset_r + r
+                target_c = offset_c + c
+                if 0 <= target_r < target_height and 0 <= target_c < target_width:
+                    result[target_r][target_c] = grid[r][c]
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'manipulation': 1.0,
+            'spatial': 1.0,
+            'resizing': 1.0,
+            'size_change': 1.0,
+        }
+
+
+# =============================================================================
 # PRIMITIVE LIBRARY
 # =============================================================================
 
@@ -607,6 +999,18 @@ class PrimitiveLibrary:
         # Manipulation - Color (2)
         self.register(RecolorPrimitive())
         self.register(FillBackgroundPrimitive())
+
+        # Object Manipulation (5)
+        self.register(RenderObjectsPrimitive())
+        self.register(MoveObjectPrimitive())
+        self.register(ScaleObjectPrimitive())
+        self.register(ReplicateObjectPrimitive())
+        self.register(RecolorObjectPrimitive())
+
+        # Size/Shape Change (3)
+        self.register(ScaleGridPrimitive())
+        self.register(AutoCropPrimitive())
+        self.register(ResizeToTargetPrimitive())
 
     def register(self, primitive: Primitive):
         """Add a primitive to the library."""
