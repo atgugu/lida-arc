@@ -306,6 +306,34 @@ class ARCCodeletFactory:
                                     scale_factor = params.get('scale_factor', 1.0)
                                     result = prim.execute(result, scale_factor)
 
+                                elif op_name == 'recolor_if_has_neighbor':
+                                    # Conditional recolor based on neighbors
+                                    params = hyp.pattern.operation_params
+                                    neighbor_color = params.get('neighbor_color', 1)
+                                    new_color = params.get('new_color', 2)
+                                    target_color = params.get('target_color', None)
+                                    result = prim.execute(result, neighbor_color, new_color, target_color)
+
+                                elif op_name == 'recolor_if_isolated':
+                                    # Conditional recolor based on isolation
+                                    params = hyp.pattern.operation_params
+                                    new_color = params.get('new_color', 1)
+                                    target_color = params.get('target_color', None)
+                                    result = prim.execute(result, new_color, target_color)
+
+                                elif op_name == 'recolor_if_on_edge':
+                                    # Conditional recolor based on edge position
+                                    params = hyp.pattern.operation_params
+                                    new_color = params.get('new_color', 1)
+                                    target_color = params.get('target_color', None)
+                                    result = prim.execute(result, new_color, target_color)
+
+                                elif op_name == 'remove_if_isolated':
+                                    # Remove isolated pixels
+                                    params = hyp.pattern.operation_params
+                                    target_color = params.get('target_color', None)
+                                    result = prim.execute(result, target_color)
+
                                 else:
                                     # No parameters needed
                                     result = prim.execute(result)
@@ -493,6 +521,38 @@ class ARCCodeletFactory:
                             scale_factor = params.get('scale_factor', 1.0)
                             self._debug(f"        Applying scale_grid {scale_factor:.1f}x")
                             result = prim.execute(result, scale_factor)
+
+                        elif op_name == 'recolor_if_has_neighbor':
+                            # Conditional recolor based on neighbors
+                            params = self.winning_pattern.operation_params
+                            neighbor_color = params.get('neighbor_color', 1)
+                            new_color = params.get('new_color', 2)
+                            target_color = params.get('target_color', None)
+                            self._debug(f"        Applying recolor_if_has_neighbor (neighbor={neighbor_color}, new={new_color})")
+                            result = prim.execute(result, neighbor_color, new_color, target_color)
+
+                        elif op_name == 'recolor_if_isolated':
+                            # Conditional recolor based on isolation
+                            params = self.winning_pattern.operation_params
+                            new_color = params.get('new_color', 1)
+                            target_color = params.get('target_color', None)
+                            self._debug(f"        Applying recolor_if_isolated (new_color={new_color})")
+                            result = prim.execute(result, new_color, target_color)
+
+                        elif op_name == 'recolor_if_on_edge':
+                            # Conditional recolor based on edge position
+                            params = self.winning_pattern.operation_params
+                            new_color = params.get('new_color', 1)
+                            target_color = params.get('target_color', None)
+                            self._debug(f"        Applying recolor_if_on_edge (new_color={new_color})")
+                            result = prim.execute(result, new_color, target_color)
+
+                        elif op_name == 'remove_if_isolated':
+                            # Remove isolated pixels
+                            params = self.winning_pattern.operation_params
+                            target_color = params.get('target_color', None)
+                            self._debug(f"        Applying remove_if_isolated")
+                            result = prim.execute(result, target_color)
 
                         else:
                             # No parameters needed

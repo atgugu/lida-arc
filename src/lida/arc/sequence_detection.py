@@ -266,6 +266,44 @@ class SequenceDetector:
             # No parameters needed
             variants.append((op_name, {}))
 
+        elif op_name == 'recolor_if_has_neighbor':
+            # Try different neighbor_color and new_color combinations from grid
+            try:
+                if current_grid and target_grid:
+                    # Get unique colors from both grids
+                    current_colors = set()
+                    target_colors = set()
+                    for row in current_grid:
+                        current_colors.update(row)
+                    for row in target_grid:
+                        target_colors.update(row)
+
+                    # Try reasonable combinations (limit to prevent explosion)
+                    for neighbor_c in list(current_colors)[:3]:  # Check for neighbors of these colors
+                        for new_c in list(target_colors)[:3]:  # Recolor to these
+                            if neighbor_c != new_c:
+                                variants.append((op_name, {'neighbor_color': neighbor_c, 'new_color': new_c}))
+            except (KeyError, IndexError, TypeError):
+                pass
+
+        elif op_name in ['recolor_if_isolated', 'recolor_if_on_edge']:
+            # Try different new_color values from target grid
+            try:
+                if target_grid:
+                    target_colors = set()
+                    for row in target_grid:
+                        target_colors.update(row)
+
+                    # Try each color from target
+                    for new_c in list(target_colors)[:4]:
+                        variants.append((op_name, {'new_color': new_c}))
+            except (KeyError, IndexError, TypeError):
+                pass
+
+        elif op_name == 'remove_if_isolated':
+            # No parameters needed (always sets to background/0)
+            variants.append((op_name, {}))
+
         else:
             # No parameters needed
             variants.append((op_name, {}))
@@ -315,79 +353,13 @@ class SequenceDetector:
         Returns:
             List of operation names, or None if no sequence found
         """
-        # Start with single candidate (empty sequence, starting grid)
-        candidates = [SequenceCandidate(
-            sequence=[],
-            current_grid=copy.deepcopy(input_grid),
-            distance_to_target=GridDistance.compute(input_grid, output_grid),
-            confidence=1.0
-        )]
+        # Delegate to find_all_sequences and return the first (shortest) sequence
+        all_sequences = self.find_all_sequences(input_grid, output_grid, color_mapping)
 
-        # Iterative deepening
-        for depth in range(1, self.max_depth + 1):
-            # Extend each candidate with one more operation
-            new_candidates = []
-
-            for candidate in candidates:
-                # Try each primitive operation
-                for prim_name in self.primitives.get_all_names():
-                    # Create extended sequence
-                    extended_sequence = candidate.sequence + [prim_name]
-
-                    # Check if sequence is valid
-                    if not self.pruner.is_valid_sequence(extended_sequence):
-                        continue
-
-                    # Apply operation
-                    try:
-                        result_grid = copy.deepcopy(candidate.current_grid)
-                        prim = self.primitives.get(prim_name)
-
-                        # Special handling for recolor
-                        if prim_name == 'recolor' and color_mapping:
-                            result_grid = prim.execute(result_grid, color_mapping)
-                        else:
-                            result_grid = prim.execute(result_grid)
-
-                        # Create new candidate
-                        new_candidate = candidate.extend(
-                            prim_name,
-                            result_grid,
-                            output_grid,
-                            color_mapping
-                        )
-
-                        new_candidates.append(new_candidate)
-
-                        # Note: No early termination - explore all depths to find best solution
-                        # With single training examples, simple solutions might not generalize
-
-                    except Exception:
-                        # Operation failed, skip this candidate
-                        continue
-
-            if not new_candidates:
-                break
-
-            # Prune to beam width
-            candidates = self.pruner.prune_beam(new_candidates, self.beam_width)
-
-        # Return best candidate found
-        # Prefer: exact matches > closer matches, then shorter sequences
-        if candidates:
-            # First try to find exact matches
-            exact_matches = [c for c in candidates if c.distance_to_target == 0]
-
-            if exact_matches:
-                # Among exact matches, prefer shorter sequences (Occam's razor)
-                # But also consider confidence (longer well-validated sequences might be better)
-                best = min(exact_matches, key=lambda c: (len(c.sequence), -c.confidence))
-                return best.sequence
-
-            # No exact match, return closest
-            best = min(candidates, key=lambda c: (c.distance_to_target, len(c.sequence)))
-            if best.distance_to_target < 0.5:  # Accept if at least 50% correct
-                return best.sequence
+        if all_sequences:
+            # Return the sequence from the first tuple (sequences are already sorted by length)
+            sequence, params = all_sequences[0]
+            return sequence
 
         return None
 
@@ -480,6 +452,18 @@ class SequenceDetector:
                             elif op_name == 'scale_grid' and params:
                                 # Apply scaling with parameters
                                 result_grid = prim.execute(result_grid, params['scale_factor'])
+
+                            elif op_name == 'recolor_if_has_neighbor' and params:
+                                # Apply conditional recolor with neighbor check
+                                result_grid = prim.execute(result_grid, params['neighbor_color'], params['new_color'])
+
+                            elif op_name in ['recolor_if_isolated', 'recolor_if_on_edge'] and params:
+                                # Apply conditional recolor with position/isolation check
+                                result_grid = prim.execute(result_grid, params['new_color'])
+
+                            elif op_name == 'remove_if_isolated':
+                                # Remove isolated pixels (no params needed)
+                                result_grid = prim.execute(result_grid)
 
                             else:
                                 # No parameters needed

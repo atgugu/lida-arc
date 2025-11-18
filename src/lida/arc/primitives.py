@@ -965,6 +965,267 @@ class ResizeToTargetPrimitive(Primitive):
 
 
 # =============================================================================
+# CONDITIONAL/RULE-BASED PRIMITIVES
+# =============================================================================
+
+class ConditionalPrimitive(Primitive):
+    """Base class for conditional transformations using spatial predicates."""
+
+    def __init__(self, name: str):
+        super().__init__(name, 'conditional')
+
+    @staticmethod
+    def get_neighbors(grid: List[List[int]], r: int, c: int, include_diagonals: bool = True) -> List[Tuple[int, int, int]]:
+        """Get neighbors of a pixel.
+
+        Returns:
+            List of (row, col, color) tuples for valid neighbors
+        """
+        height = len(grid)
+        width = len(grid[0]) if grid else 0
+        neighbors = []
+
+        # Orthogonal neighbors
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < height and 0 <= nc < width:
+                neighbors.append((nr, nc, grid[nr][nc]))
+
+        # Diagonal neighbors
+        if include_diagonals:
+            for dr, dc in [(-1, -1), (-1, 1), (1, -1), (1, 1)]:
+                nr, nc = r + dr, c + dc
+                if 0 <= nr < height and 0 <= nc < width:
+                    neighbors.append((nr, nc, grid[nr][nc]))
+
+        return neighbors
+
+    @staticmethod
+    def has_neighbor_with_color(grid: List[List[int]], r: int, c: int,
+                                 target_color: int, include_diagonals: bool = True) -> bool:
+        """Check if pixel has a neighbor with specific color."""
+        neighbors = ConditionalPrimitive.get_neighbors(grid, r, c, include_diagonals)
+        return any(color == target_color for _, _, color in neighbors)
+
+    @staticmethod
+    def is_on_edge(grid: List[List[int]], r: int, c: int) -> bool:
+        """Check if pixel is on grid edge."""
+        height = len(grid)
+        width = len(grid[0]) if grid else 0
+        return r == 0 or r == height - 1 or c == 0 or c == width - 1
+
+    @staticmethod
+    def is_in_corner(grid: List[List[int]], r: int, c: int) -> bool:
+        """Check if pixel is in a corner."""
+        height = len(grid)
+        width = len(grid[0]) if grid else 0
+        return ((r == 0 or r == height - 1) and (c == 0 or c == width - 1))
+
+    @staticmethod
+    def is_isolated(grid: List[List[int]], r: int, c: int) -> bool:
+        """Check if pixel has no neighbors of the same color."""
+        pixel_color = grid[r][c]
+        if pixel_color == 0:  # Background is never isolated
+            return False
+        neighbors = ConditionalPrimitive.get_neighbors(grid, r, c, include_diagonals=True)
+        return not any(color == pixel_color for _, _, color in neighbors)
+
+    @staticmethod
+    def count_neighbors_with_color(grid: List[List[int]], r: int, c: int,
+                                    target_color: int, include_diagonals: bool = True) -> int:
+        """Count neighbors with specific color."""
+        neighbors = ConditionalPrimitive.get_neighbors(grid, r, c, include_diagonals)
+        return sum(1 for _, _, color in neighbors if color == target_color)
+
+
+class RecolorIfHasNeighborPrimitive(ConditionalPrimitive):
+    """Recolor pixels that have a neighbor of specific color."""
+
+    def __init__(self):
+        super().__init__('recolor_if_has_neighbor')
+
+    def execute(self, grid: List[List[int]], neighbor_color: int, new_color: int,
+                target_color: Optional[int] = None) -> List[List[int]]:
+        """Recolor pixels that have a neighbor with specified color.
+
+        Args:
+            grid: Input grid
+            neighbor_color: Color to check for in neighbors
+            new_color: Color to change matching pixels to
+            target_color: Only check pixels of this color (None = all non-background)
+
+        Returns:
+            Transformed grid
+        """
+        result = [row[:] for row in grid]  # Deep copy
+
+        for r in range(len(grid)):
+            for c in range(len(grid[0])):
+                pixel_color = grid[r][c]
+
+                # Skip if not target color
+                if target_color is not None and pixel_color != target_color:
+                    continue
+
+                # Skip background unless explicitly targeted
+                if target_color is None and pixel_color == 0:
+                    continue
+
+                # Check condition
+                if self.has_neighbor_with_color(grid, r, c, neighbor_color):
+                    result[r][c] = new_color
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'conditional': 1.0,
+            'neighbor_based': 1.0,
+            'color_based': 1.0,
+            'rule_based': 1.0,
+        }
+
+
+class RecolorIfIsolatedPrimitive(ConditionalPrimitive):
+    """Recolor isolated pixels (no same-color neighbors)."""
+
+    def __init__(self):
+        super().__init__('recolor_if_isolated')
+
+    def execute(self, grid: List[List[int]], new_color: int,
+                target_color: Optional[int] = None) -> List[List[int]]:
+        """Recolor isolated pixels.
+
+        Args:
+            grid: Input grid
+            new_color: Color to change isolated pixels to
+            target_color: Only check pixels of this color (None = all non-background)
+
+        Returns:
+            Transformed grid
+        """
+        result = [row[:] for row in grid]
+
+        for r in range(len(grid)):
+            for c in range(len(grid[0])):
+                pixel_color = grid[r][c]
+
+                # Skip if not target color
+                if target_color is not None and pixel_color != target_color:
+                    continue
+
+                # Skip background
+                if pixel_color == 0:
+                    continue
+
+                # Check condition
+                if self.is_isolated(grid, r, c):
+                    result[r][c] = new_color
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'conditional': 1.0,
+            'isolation_based': 1.0,
+            'color_based': 1.0,
+            'rule_based': 1.0,
+        }
+
+
+class RecolorIfOnEdgePrimitive(ConditionalPrimitive):
+    """Recolor pixels on grid edges."""
+
+    def __init__(self):
+        super().__init__('recolor_if_on_edge')
+
+    def execute(self, grid: List[List[int]], new_color: int,
+                target_color: Optional[int] = None) -> List[List[int]]:
+        """Recolor pixels on edges.
+
+        Args:
+            grid: Input grid
+            new_color: Color to change edge pixels to
+            target_color: Only check pixels of this color (None = all non-background)
+
+        Returns:
+            Transformed grid
+        """
+        result = [row[:] for row in grid]
+
+        for r in range(len(grid)):
+            for c in range(len(grid[0])):
+                pixel_color = grid[r][c]
+
+                # Skip if not target color
+                if target_color is not None and pixel_color != target_color:
+                    continue
+
+                # Skip background unless explicitly targeted
+                if target_color is None and pixel_color == 0:
+                    continue
+
+                # Check condition
+                if self.is_on_edge(grid, r, c):
+                    result[r][c] = new_color
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'conditional': 1.0,
+            'edge_based': 1.0,
+            'color_based': 1.0,
+            'rule_based': 1.0,
+        }
+
+
+class RemoveIfIsolatedPrimitive(ConditionalPrimitive):
+    """Remove isolated pixels by setting them to background."""
+
+    def __init__(self):
+        super().__init__('remove_if_isolated')
+
+    def execute(self, grid: List[List[int]], target_color: Optional[int] = None) -> List[List[int]]:
+        """Remove isolated pixels.
+
+        Args:
+            grid: Input grid
+            target_color: Only check pixels of this color (None = all non-background)
+
+        Returns:
+            Transformed grid
+        """
+        result = [row[:] for row in grid]
+
+        for r in range(len(grid)):
+            for c in range(len(grid[0])):
+                pixel_color = grid[r][c]
+
+                # Skip if not target color
+                if target_color is not None and pixel_color != target_color:
+                    continue
+
+                # Skip background
+                if pixel_color == 0:
+                    continue
+
+                # Check condition
+                if self.is_isolated(grid, r, c):
+                    result[r][c] = 0  # Remove (set to background)
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'conditional': 1.0,
+            'isolation_based': 1.0,
+            'removal': 1.0,
+            'rule_based': 1.0,
+        }
+
+
+# =============================================================================
 # PRIMITIVE LIBRARY
 # =============================================================================
 
@@ -1011,6 +1272,12 @@ class PrimitiveLibrary:
         self.register(ScaleGridPrimitive())
         self.register(AutoCropPrimitive())
         self.register(ResizeToTargetPrimitive())
+
+        # Conditional/Rule-Based (4)
+        self.register(RecolorIfHasNeighborPrimitive())
+        self.register(RecolorIfIsolatedPrimitive())
+        self.register(RecolorIfOnEdgePrimitive())
+        self.register(RemoveIfIsolatedPrimitive())
 
     def register(self, primitive: Primitive):
         """Add a primitive to the library."""
