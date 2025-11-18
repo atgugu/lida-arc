@@ -160,17 +160,24 @@ class SequenceCandidate:
     current_grid: Optional[Grid] = None
     distance_to_target: float = 1.0
     confidence: float = 1.0
+    operation_params: Dict[str, Dict] = field(default_factory=dict)  # Store parameters for parametric ops
 
     def extend(
         self,
         operation: str,
         result_grid: Grid,
         target: Grid,
+        params: Optional[Dict] = None,
         color_mapping: Optional[Dict[int, int]] = None
     ) -> 'SequenceCandidate':
         """Extend this candidate with one more operation."""
         new_sequence = self.sequence + [operation]
         new_distance = GridDistance.compute(result_grid, target)
+
+        # Copy existing parameters and add new ones if provided
+        new_params = self.operation_params.copy()
+        if params:
+            new_params[operation] = params
 
         # Confidence calculation:
         # - Length penalty: prefer shorter sequences (0.9^length)
@@ -184,7 +191,8 @@ class SequenceCandidate:
             sequence=new_sequence,
             current_grid=copy.deepcopy(result_grid),
             distance_to_target=new_distance,
-            confidence=new_confidence
+            confidence=new_confidence,
+            operation_params=new_params
         )
 
 
@@ -202,6 +210,67 @@ class SequenceDetector:
         self.max_depth = max_depth
         self.beam_width = beam_width
         self.pruner = SequencePruner()
+
+    def _generate_operation_variants(self, op_name: str, current_grid: Grid, target_grid: Grid) -> List[Tuple[str, Dict]]:
+        """
+        Generate variants of an operation with different parameters.
+
+        Returns:
+            List of (operation_name, parameters_dict) tuples to try
+        """
+        variants = []
+
+        if op_name == 'tile':
+            # Try different tiling factors based on size ratio
+            try:
+                if current_grid and target_grid:
+                    in_h, in_w = len(current_grid), len(current_grid[0])
+                    out_h, out_w = len(target_grid), len(target_grid[0])
+
+                    # Try factors that make sense
+                    for repeat_v in [2, 3, 4]:
+                        for repeat_w in [2, 3, 4]:
+                            if repeat_v * in_h <= out_h + 1 and repeat_w * in_w <= out_w + 1:
+                                variants.append((op_name, {'repeat_v': repeat_v, 'repeat_w': repeat_w}))
+            except (KeyError, IndexError, TypeError):
+                pass
+
+        elif op_name == 'scale_grid':
+            # Try common scale factors
+            try:
+                if current_grid and target_grid:
+                    in_h, in_w = len(current_grid), len(current_grid[0])
+                    out_h, out_w = len(target_grid), len(target_grid[0])
+
+                    # Compute approximate scale factor
+                    if in_h > 0 and in_w > 0:
+                        scale_h = out_h / in_h
+                        scale_w = out_w / in_w
+
+                        # Try exact scale if uniform
+                        if abs(scale_h - scale_w) < 0.1:
+                            variants.append((op_name, {'scale_factor': scale_h}))
+
+                        # Try common scales: 0.5, 2, 3
+                        for scale in [0.5, 2.0, 3.0]:
+                            if 0.8 < scale / scale_h < 1.2 or 0.8 < scale / scale_w < 1.2:
+                                variants.append((op_name, {'scale_factor': scale}))
+            except (KeyError, IndexError, TypeError, ZeroDivisionError):
+                pass
+
+        elif op_name in ['crop', 'extend', 'overlay']:
+            # Skip parametric operations that need specific coordinates for now
+            pass
+
+        elif op_name == 'auto_crop':
+            # No parameters needed
+            variants.append((op_name, {}))
+
+        else:
+            # No parameters needed
+            variants.append((op_name, {}))
+
+        return variants if variants else [(op_name, {})]
 
     @staticmethod
     def _infer_color_mapping(grid1: Grid, grid2: Grid) -> Optional[Dict[int, int]]:
@@ -327,13 +396,15 @@ class SequenceDetector:
         input_grid: Grid,
         output_grid: Grid,
         color_mapping: Optional[Dict[int, int]] = None
-    ) -> List[List[str]]:
+    ) -> List[Tuple[List[str], Dict[str, Dict]]]:
         """
         Find ALL exact-match sequences across all depths.
 
         Returns:
-            List of sequences that exactly transform input to output,
-            sorted by length (shortest first)
+            List of (sequence, operation_params) tuples where:
+            - sequence: List of operation names
+            - operation_params: Dict mapping operation names to their parameters
+            Sorted by length (shortest first)
         """
         all_exact_matches = []
 
@@ -380,41 +451,56 @@ class SequenceDetector:
                     if not self.pruner.is_valid_sequence(extended_sequence):
                         continue
 
-                    try:
-                        result_grid = copy.deepcopy(candidate.current_grid)
-                        prim = self.primitives.get(prim_name)
+                    # Generate parameter variants for this operation
+                    variants = self._generate_operation_variants(prim_name, candidate.current_grid, output_grid)
 
-                        # Handle recolor with dynamic color mapping inference
-                        if prim_name == 'recolor':
-                            # Infer color mapping from current grid to target
-                            inferred_mapping = self._infer_color_mapping(candidate.current_grid, output_grid)
+                    for op_name, params in variants:
+                        try:
+                            result_grid = copy.deepcopy(candidate.current_grid)
+                            prim = self.primitives.get(op_name)
 
-                            if inferred_mapping:
-                                result_grid = prim.execute(result_grid, inferred_mapping)
-                            elif color_mapping:
-                                # Fall back to provided mapping
-                                result_grid = prim.execute(result_grid, color_mapping)
+                            # Handle different operation types with parameters
+                            if op_name == 'recolor':
+                                # Infer color mapping from current grid to target
+                                inferred_mapping = self._infer_color_mapping(candidate.current_grid, output_grid)
+
+                                if inferred_mapping:
+                                    result_grid = prim.execute(result_grid, inferred_mapping)
+                                elif color_mapping:
+                                    # Fall back to provided mapping
+                                    result_grid = prim.execute(result_grid, color_mapping)
+                                else:
+                                    # No mapping available, skip
+                                    continue
+
+                            elif op_name == 'tile' and params:
+                                # Apply tiling with parameters
+                                result_grid = prim.execute(result_grid, params['repeat_v'], params['repeat_w'])
+
+                            elif op_name == 'scale_grid' and params:
+                                # Apply scaling with parameters
+                                result_grid = prim.execute(result_grid, params['scale_factor'])
+
                             else:
-                                # No mapping available, skip
-                                continue
-                        else:
-                            result_grid = prim.execute(result_grid)
+                                # No parameters needed
+                                result_grid = prim.execute(result_grid)
 
-                        new_candidate = candidate.extend(
-                            prim_name,
-                            result_grid,
-                            output_grid,
-                            color_mapping
-                        )
+                            new_candidate = candidate.extend(
+                                op_name,
+                                result_grid,
+                                output_grid,
+                                params=params,
+                                color_mapping=color_mapping
+                            )
 
-                        new_candidates.append(new_candidate)
+                            new_candidates.append(new_candidate)
 
-                        # Collect exact matches
-                        if new_candidate.distance_to_target == 0:
-                            all_exact_matches.append(new_candidate.sequence)
+                            # Collect exact matches (sequence + params)
+                            if new_candidate.distance_to_target == 0:
+                                all_exact_matches.append((new_candidate.sequence, new_candidate.operation_params))
 
-                    except Exception:
-                        continue
+                        except Exception:
+                            continue
 
             if not new_candidates:
                 if debug:
@@ -431,13 +517,13 @@ class SequenceDetector:
                 print(f"[find_all_sequences]   After pruning: {len(candidates)} candidates kept")
 
         # Sort by length (prefer simpler explanations first)
-        all_exact_matches.sort(key=len)
+        all_exact_matches.sort(key=lambda x: len(x[0]))
 
         # Debug output
         if False:  # Set to True for debugging
             print(f"[find_all_sequences] Returning {len(all_exact_matches)} sequences")
-            for seq in all_exact_matches[:10]:
-                print(f"[find_all_sequences]   - {seq}")
+            for seq, params in all_exact_matches[:10]:
+                print(f"[find_all_sequences]   - {seq} with params {params}")
 
         return all_exact_matches
 

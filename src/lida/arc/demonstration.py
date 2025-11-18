@@ -355,18 +355,23 @@ class DemonstrationAnalyzer:
 
             # Add sequences with 2+ operations as alternative hypotheses
             # (single operations are already tried above)
-            for seq_idx, sequence in enumerate(all_sequences):
+            for seq_idx, (sequence, seq_params) in enumerate(all_sequences):
                 if len(sequence) >= 2 and sequence not in [p.grid_operations for p in patterns]:
                     # Longer sequences get slightly lower confidence (Occam's razor)
                     # But they might generalize better than simpler explanations
                     confidence = 0.95 - (0.05 * (len(sequence) - 2))  # 0.95, 0.90, 0.85...
                     confidence = max(confidence, 0.70)  # Floor at 0.70
 
+                    # Merge sequence params with color map if needed
+                    combined_params = seq_params.copy() if seq_params else {}
+                    if color_map and 'recolor' in sequence:
+                        combined_params['color_map'] = color_map
+
                     patterns.append(TransformationPattern(
                         pattern_id=f'grid_sequence_{len(sequence)}_ops_demo{demo_index}_{seq_idx}',
                         transformation_type='grid_op',
                         grid_operations=sequence,
-                        operation_params={'color_map': color_map} if color_map and 'recolor' in sequence else {},
+                        operation_params=combined_params,
                         color_mapping=color_map if 'recolor' in sequence else None,
                         confidence=confidence,
                         supporting_demos=[demo_index],
