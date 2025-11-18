@@ -9,6 +9,9 @@ from .environment import ARCTask, GridPair, ARCEnvironment
 from .perception import GridObject, ObjectExtractor, GridAnalyzer
 from .primitives import Primitive, PrimitiveLibrary
 from .demonstration import TransformationPattern, DemonstrationAnalyzer
+from .pam_integration import (
+    ARCPAMSeeder, ARCCategoryInduction, ARCHebbianLearning, ARCPAMIntegration
+)
 
 __all__ = [
     'ARCTask',
@@ -21,4 +24,8 @@ __all__ = [
     'PrimitiveLibrary',
     'TransformationPattern',
     'DemonstrationAnalyzer',
+    'ARCPAMSeeder',
+    'ARCCategoryInduction',
+    'ARCHebbianLearning',
+    'ARCPAMIntegration',
 ]
