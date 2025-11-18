@@ -395,6 +395,48 @@ class SequenceDetector:
             except (KeyError, IndexError, TypeError):
                 pass
 
+        elif op_name == 'extract_pattern':
+            # Pattern extraction: try extracting from different positions
+            try:
+                if current_grid:
+                    grid_h = len(current_grid)
+                    grid_w = len(current_grid[0]) if current_grid else 0
+
+                    # Try extracting from corners (common patterns)
+                    positions = [(0, 0)]  # Top-left (most common)
+
+                    # Try various sizes (small to medium patterns)
+                    for row, col in positions:
+                        for h in [2, 3, 4]:
+                            for w in [2, 3, 4]:
+                                if row + h <= grid_h and col + w <= grid_w:
+                                    variants.append((op_name, {
+                                        'row': row,
+                                        'col': col,
+                                        'height': h,
+                                        'width': w
+                                    }))
+            except (KeyError, IndexError, TypeError):
+                pass
+
+        elif op_name == 'extract_top_left':
+            # Extract top-left corner: try various sizes
+            try:
+                if current_grid:
+                    grid_h = len(current_grid)
+                    grid_w = len(current_grid[0]) if current_grid else 0
+
+                    # Try common extraction sizes
+                    for h in [2, 3, 4, 5]:
+                        for w in [2, 3, 4, 5]:
+                            if h <= grid_h and w <= grid_w:
+                                variants.append((op_name, {
+                                    'height': h,
+                                    'width': w
+                                }))
+            except (KeyError, IndexError, TypeError):
+                pass
+
         else:
             # No parameters needed
             variants.append((op_name, {}))

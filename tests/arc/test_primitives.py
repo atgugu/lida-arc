@@ -289,8 +289,8 @@ class TestPrimitiveLibrary:
         """Test primitive library initialization."""
         lib = PrimitiveLibrary()
 
-        # Should have 34 primitives (5 perceptual + 12 manipulation + 8 object/size + 4 conditional + 5 morphological)
-        assert len(lib) == 34
+        # Should have 36 primitives (5 perceptual + 12 manipulation + 8 object/size + 4 conditional + 5 morphological + 2 pattern_extraction)
+        assert len(lib) == 36
 
     def test_get_primitive(self):
         """Test retrieving primitives by name."""
@@ -323,6 +323,9 @@ class TestPrimitiveLibrary:
         morphology = lib.get_all_by_category('morphology')
         assert len(morphology) == 5  # dilate, erode, flood_fill, fill_enclosed, spread_to_neighbors
 
+        pattern_extraction = lib.get_all_by_category('pattern_extraction')
+        assert len(pattern_extraction) == 2  # extract_pattern, extract_top_left
+
     def test_register_custom_primitive(self):
         """Test registering a custom primitive."""
         lib = PrimitiveLibrary()
@@ -350,8 +353,8 @@ class TestPrimitiveLibrary:
 
         features = lib.get_features_for_pam()
 
-        # Should have features for all 34 primitives
-        assert len(features) == 34
+        # Should have features for all 36 primitives
+        assert len(features) == 36
 
         # Check specific primitive
         assert 'rotate_90' in features

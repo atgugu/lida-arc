@@ -1513,6 +1513,97 @@ class SpreadToNeighborsPrimitive(Primitive):
 
 
 # =============================================================================
+# PATTERN EXTRACTION PRIMITIVES
+# =============================================================================
+
+class ExtractPatternPrimitive(Primitive):
+    """Extract a rectangular sub-region from a grid."""
+
+    def __init__(self):
+        super().__init__('extract_pattern', 'pattern_extraction')
+
+    def execute(self, grid: List[List[int]], row: int, col: int,
+                height: int, width: int) -> List[List[int]]:
+        """Extract a sub-region from the grid.
+
+        Args:
+            grid: Input grid
+            row: Starting row (0-indexed)
+            col: Starting column (0-indexed)
+            height: Height of region to extract
+            width: Width of region to extract
+
+        Returns:
+            Extracted sub-grid
+        """
+        grid_h = len(grid)
+        grid_w = len(grid[0]) if grid else 0
+
+        # Validate bounds
+        if row < 0 or col < 0:
+            raise ValueError(f"Row and col must be non-negative, got row={row}, col={col}")
+        if row + height > grid_h or col + width > grid_w:
+            raise ValueError(f"Region {row},{col}+{height}x{width} exceeds grid {grid_h}x{grid_w}")
+        if height <= 0 or width <= 0:
+            raise ValueError(f"Height and width must be positive, got {height}x{width}")
+
+        # Extract the sub-region
+        result = []
+        for r in range(row, row + height):
+            result.append(grid[r][col:col+width])
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'pattern_extraction': 1.0,
+            'sub_region': 1.0,
+            'spatial': 1.0,
+        }
+
+
+class ExtractTopLeftPrimitive(Primitive):
+    """Extract a region from the top-left corner (common pattern)."""
+
+    def __init__(self):
+        super().__init__('extract_top_left', 'pattern_extraction')
+
+    def execute(self, grid: List[List[int]], height: int, width: int) -> List[List[int]]:
+        """Extract from top-left corner.
+
+        Args:
+            grid: Input grid
+            height: Height of region to extract
+            width: Width of region to extract
+
+        Returns:
+            Extracted sub-grid from (0,0)
+        """
+        grid_h = len(grid)
+        grid_w = len(grid[0]) if grid else 0
+
+        # Validate
+        if height > grid_h or width > grid_w:
+            raise ValueError(f"Region {height}x{width} exceeds grid {grid_h}x{grid_w}")
+        if height <= 0 or width <= 0:
+            raise ValueError(f"Height and width must be positive, got {height}x{width}")
+
+        # Extract from top-left
+        result = []
+        for r in range(height):
+            result.append(grid[r][:width])
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'pattern_extraction': 1.0,
+            'top_left': 1.0,
+            'spatial': 1.0,
+        }
+
+
+# =============================================================================
 # PRIMITIVE LIBRARY
 # =============================================================================
 
@@ -1572,6 +1663,10 @@ class PrimitiveLibrary:
         self.register(FloodFillPrimitive())
         self.register(FillEnclosedPrimitive())
         self.register(SpreadToNeighborsPrimitive())
+
+        # Pattern Extraction (2)
+        self.register(ExtractPatternPrimitive())
+        self.register(ExtractTopLeftPrimitive())
 
     def register(self, primitive: Primitive):
         """Add a primitive to the library."""

@@ -365,6 +365,22 @@ class ARCCodeletFactory:
                                     iterations = params.get('iterations', 1)
                                     result = prim.execute(result, source_color, target_color, iterations)
 
+                                elif op_name == 'extract_pattern':
+                                    # Extract rectangular sub-region
+                                    params = hyp.pattern.operation_params
+                                    row = params.get('row', 0)
+                                    col = params.get('col', 0)
+                                    height = params.get('height', 2)
+                                    width = params.get('width', 2)
+                                    result = prim.execute(result, row, col, height, width)
+
+                                elif op_name == 'extract_top_left':
+                                    # Extract from top-left corner
+                                    params = hyp.pattern.operation_params
+                                    height = params.get('height', 2)
+                                    width = params.get('width', 2)
+                                    result = prim.execute(result, height, width)
+
                                 else:
                                     # No parameters needed
                                     result = prim.execute(result)
@@ -619,6 +635,24 @@ class ARCCodeletFactory:
                             iterations = params.get('iterations', 1)
                             self._debug(f"        Applying spread_to_neighbors (source={source_color}, target={target_color}, iters={iterations})")
                             result = prim.execute(result, source_color, target_color, iterations)
+
+                        elif op_name == 'extract_pattern':
+                            # Extract rectangular sub-region
+                            params = self.winning_pattern.operation_params
+                            row = params.get('row', 0)
+                            col = params.get('col', 0)
+                            height = params.get('height', 2)
+                            width = params.get('width', 2)
+                            self._debug(f"        Applying extract_pattern (row={row}, col={col}, {height}x{width})")
+                            result = prim.execute(result, row, col, height, width)
+
+                        elif op_name == 'extract_top_left':
+                            # Extract from top-left corner
+                            params = self.winning_pattern.operation_params
+                            height = params.get('height', 2)
+                            width = params.get('width', 2)
+                            self._debug(f"        Applying extract_top_left ({height}x{width})")
+                            result = prim.execute(result, height, width)
 
                         else:
                             # No parameters needed
