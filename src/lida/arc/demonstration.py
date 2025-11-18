@@ -100,10 +100,9 @@ class DemonstrationAnalyzer:
         self.primitives = primitive_library
         self.object_extractor = ObjectExtractor()
         self.grid_analyzer = GridAnalyzer()
-        # Sequence detector for composite operations (depth-5 with beam search)
-        # Increased depth and beam width to find multi-step compositions (extract→tile, etc.)
-        # Stage 1 improvement: max_depth 3→5, beam_width 10→20
-        self.sequence_detector = SequenceDetector(primitive_library, max_depth=5, beam_width=20)
+        # Sequence detector for composite operations (depth-3 with beam search)
+        # Larger beam width ensures we find more sequence variants
+        self.sequence_detector = SequenceDetector(primitive_library, max_depth=3, beam_width=10)
 
     def analyze_pair(self, grid_pair: GridPair, demo_index: int = 0) -> List[TransformationPattern]:
         """Extract all possible transformation patterns from a single demo pair.
