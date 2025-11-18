@@ -242,6 +242,81 @@ class DemonstrationAnalyzer:
                 except:
                     pass
 
+        # Try grid tiling
+        if input_grid and output_grid and input_grid[0] and output_grid[0]:
+            in_h, in_w = len(input_grid), len(input_grid[0])
+            out_h, out_w = len(output_grid), len(output_grid[0])
+
+            # Check if output dimensions are multiples of input dimensions
+            if out_h >= in_h and out_w >= in_w:
+                repeat_h = out_h // in_h
+                repeat_w = out_w // in_w
+
+                # Only try if dimensions divide evenly
+                if repeat_h * in_h == out_h and repeat_w * in_w == out_w and (repeat_h > 1 or repeat_w > 1):
+                    tile_prim = self.primitives.get('tile')
+                    if tile_prim:
+                        try:
+                            result = tile_prim.execute(input_grid, repeat_h, repeat_w)
+                            if self._grids_equal(result, output_grid):
+                                patterns.append(TransformationPattern(
+                                    pattern_id=f'grid_tile_{repeat_h}x{repeat_w}_demo{demo_index}',
+                                    transformation_type='grid_op',
+                                    grid_operations=['tile'],
+                                    operation_params={'repeat_v': repeat_h, 'repeat_w': repeat_w},
+                                    confidence=1.0,
+                                    supporting_demos=[demo_index],
+                                    explanation=f"Tile grid {repeat_h}x{repeat_w}"
+                                ))
+                        except:
+                            pass
+
+        # Try grid scaling
+        if input_grid and output_grid and input_grid[0] and output_grid[0]:
+            in_h, in_w = len(input_grid), len(input_grid[0])
+            out_h, out_w = len(output_grid), len(output_grid[0])
+
+            # Check if dimensions changed by a uniform scale factor
+            if in_h > 0 and in_w > 0:
+                scale_h = out_h / in_h
+                scale_w = out_w / in_w
+
+                # If scales are approximately equal (uniform scaling)
+                if abs(scale_h - scale_w) < 0.01 and abs(scale_h - 1.0) > 0.01:
+                    scale_prim = self.primitives.get('scale_grid')
+                    if scale_prim:
+                        try:
+                            result = scale_prim.execute(input_grid, scale_h)
+                            if self._grids_equal(result, output_grid):
+                                patterns.append(TransformationPattern(
+                                    pattern_id=f'grid_scale_{scale_h:.1f}x_demo{demo_index}',
+                                    transformation_type='grid_op',
+                                    grid_operations=['scale_grid'],
+                                    operation_params={'scale_factor': scale_h},
+                                    confidence=1.0,
+                                    supporting_demos=[demo_index],
+                                    explanation=f"Scale grid by {scale_h:.1f}x"
+                                ))
+                        except:
+                            pass
+
+        # Try auto-crop
+        crop_prim = self.primitives.get('auto_crop')
+        if crop_prim:
+            try:
+                result = crop_prim.execute(input_grid)
+                if self._grids_equal(result, output_grid):
+                    patterns.append(TransformationPattern(
+                        pattern_id=f'grid_auto_crop_demo{demo_index}',
+                        transformation_type='grid_op',
+                        grid_operations=['auto_crop'],
+                        confidence=1.0,
+                        supporting_demos=[demo_index],
+                        explanation="Auto-crop to content"
+                    ))
+            except:
+                pass
+
         # Try color remapping
         color_map = self._infer_color_mapping(input_grid, output_grid)
         if color_map:

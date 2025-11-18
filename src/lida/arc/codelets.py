@@ -278,6 +278,7 @@ class ARCCodeletFactory:
                             for op_name in hyp.pattern.grid_operations:
                                 prim = self.primitives.get(op_name)
 
+                                # Handle operations with parameters
                                 if op_name == 'recolor':
                                     # CRITICAL: For multi-op sequences, dynamically infer color mapping
                                     if len(hyp.pattern.grid_operations) > 1:
@@ -291,7 +292,22 @@ class ARCCodeletFactory:
                                         result = prim.execute(result, hyp.pattern.color_mapping)
                                     else:
                                         raise ValueError("No color mapping available")
+
+                                elif op_name == 'tile':
+                                    # Grid tiling with parameters
+                                    params = hyp.pattern.operation_params
+                                    repeat_v = params.get('repeat_v', 1)
+                                    repeat_w = params.get('repeat_w', 1)
+                                    result = prim.execute(result, repeat_v, repeat_w)
+
+                                elif op_name == 'scale_grid':
+                                    # Grid scaling with parameters
+                                    params = hyp.pattern.operation_params
+                                    scale_factor = params.get('scale_factor', 1.0)
+                                    result = prim.execute(result, scale_factor)
+
                                 else:
+                                    # No parameters needed
                                     result = prim.execute(result)
 
                         elif hyp.pattern.object_transformations:
@@ -453,15 +469,33 @@ class ARCCodeletFactory:
                             self._debug(f"        ✗ Primitive '{op_name}' not found")
                             raise ValueError(f"Primitive '{op_name}' not found")
 
+                        # Handle operations with parameters
                         if op_name == 'recolor':
-                            # CRITICAL: For multi-operation sequences, use stored mapping as template
+                            # Color mapping
                             if self.winning_pattern.color_mapping:
                                 self._debug(f"        Applying recolor with mapping: {self.winning_pattern.color_mapping}")
                                 result = prim.execute(result, self.winning_pattern.color_mapping)
                             else:
                                 self._debug(f"        ✗ Recolor requires color mapping")
                                 raise ValueError("Recolor operation requires color mapping")
+
+                        elif op_name == 'tile':
+                            # Grid tiling
+                            params = self.winning_pattern.operation_params
+                            repeat_v = params.get('repeat_v', 1)
+                            repeat_w = params.get('repeat_w', 1)
+                            self._debug(f"        Applying tile {repeat_v}x{repeat_w}")
+                            result = prim.execute(result, repeat_v, repeat_w)
+
+                        elif op_name == 'scale_grid':
+                            # Grid scaling
+                            params = self.winning_pattern.operation_params
+                            scale_factor = params.get('scale_factor', 1.0)
+                            self._debug(f"        Applying scale_grid {scale_factor:.1f}x")
+                            result = prim.execute(result, scale_factor)
+
                         else:
+                            # No parameters needed
                             result = prim.execute(result)
 
                         self._debug(f"        ✓ Result shape: {len(result)}x{len(result[0]) if result else 0}")
