@@ -1,0 +1,31 @@
+{
+  "baseline": {
+    "max_predictions": 1,
+    "total_tasks": 49,
+    "exact_matches": 9,
+    "solve_rate": 0.1836734693877551,
+    "average_accuracy": 0.19557823129251703,
+    "total_time": 30.499391794204712,
+    "predictions_stats": {
+      "1": 11,
+      "0": 38
+    }
+  },
+  "multi_prediction": {
+    "max_predictions": 2,
+    "total_tasks": 49,
+    "exact_matches": 9,
+    "solve_rate": 0.1836734693877551,
+    "average_accuracy": 0.2074829931972789,
+    "total_time": 30.78182339668274,
+    "predictions_stats": {
+      "2": 9,
+      "1": 2,
+      "0": 38
+    }
+  },
+  "improvement": {
+    "solve_rate": 0.0,
+    "additional_solves": 0
+  }
+}
