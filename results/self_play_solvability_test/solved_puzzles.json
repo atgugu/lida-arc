@@ -1,0 +1,762 @@
+[
+  {
+    "puzzle_id": "synthetic_000000",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_diagonal",
+        {}
+      ],
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000001",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "reflect_horizontal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000003",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "rotate_270",
+        {}
+      ],
+      [
+        "auto_crop",
+        {}
+      ],
+      [
+        "reflect_vertical",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000004",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_diagonal",
+        {}
+      ],
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "auto_crop",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000005",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000007",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000009",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "reflect_diagonal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000010",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "reflect_diagonal",
+        {}
+      ],
+      [
+        "rotate_180",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000012",
+    "difficulty": "hard",
+    "transformation": [
+      [
+        "rotate_90",
+        {}
+      ],
+      [
+        "reflect_diagonal",
+        {}
+      ],
+      [
+        "auto_crop",
+        {}
+      ],
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "rotate_180",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000013",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "reflect_vertical",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000014",
+    "difficulty": "hard",
+    "transformation": [
+      [
+        "reflect_vertical",
+        {}
+      ],
+      [
+        "reflect_diagonal",
+        {}
+      ],
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "rotate_180",
+        {}
+      ],
+      [
+        "reflect_vertical",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000015",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "rotate_90",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000016",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "auto_crop",
+        {}
+      ],
+      [
+        "rotate_90",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000017",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000018",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_diagonal",
+        {}
+      ],
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "auto_crop",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000019",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "rotate_180",
+        {}
+      ],
+      [
+        "reflect_diagonal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000020",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "rotate_180",
+        {}
+      ],
+      [
+        "auto_crop",
+        {}
+      ],
+      [
+        "auto_crop",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000021",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "auto_crop",
+        {}
+      ],
+      [
+        "reflect_diagonal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000022",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "reflect_diagonal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000023",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_vertical",
+        {}
+      ],
+      [
+        "rotate_90",
+        {}
+      ],
+      [
+        "reflect_vertical",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000024",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "rotate_270",
+        {}
+      ],
+      [
+        "rotate_90",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000025",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_vertical",
+        {}
+      ],
+      [
+        "reflect_diagonal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000026",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "rotate_180",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000027",
+    "difficulty": "hard",
+    "transformation": [
+      [
+        "reflect_vertical",
+        {}
+      ],
+      [
+        "rotate_270",
+        {}
+      ],
+      [
+        "auto_crop",
+        {}
+      ],
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000028",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "rotate_180",
+        {}
+      ],
+      [
+        "rotate_90",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000029",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "rotate_180",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000030",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "rotate_180",
+        {}
+      ],
+      [
+        "reflect_horizontal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000031",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "rotate_180",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000032",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "rotate_180",
+        {}
+      ],
+      [
+        "rotate_180",
+        {}
+      ],
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000033",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "reflect_vertical",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000034",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_vertical",
+        {}
+      ],
+      [
+        "rotate_90",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000035",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "reflect_diagonal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000036",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000037",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "rotate_270",
+        {}
+      ],
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000039",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "reflect_diagonal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000040",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "rotate_180",
+        {}
+      ],
+      [
+        "reflect_horizontal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000041",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "auto_crop",
+        {}
+      ],
+      [
+        "rotate_180",
+        {}
+      ],
+      [
+        "rotate_90",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000042",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "auto_crop",
+        {}
+      ],
+      [
+        "rotate_90",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000043",
+    "difficulty": "hard",
+    "transformation": [
+      [
+        "reflect_vertical",
+        {}
+      ],
+      [
+        "rotate_90",
+        {}
+      ],
+      [
+        "rotate_180",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000044",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "auto_crop",
+        {}
+      ],
+      [
+        "reflect_diagonal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000045",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "reflect_vertical",
+        {}
+      ],
+      [
+        "rotate_90",
+        {}
+      ],
+      [
+        "reflect_horizontal",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000046",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000047",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "rotate_180",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000048",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "auto_crop",
+        {}
+      ],
+      [
+        "reflect_horizontal",
+        {}
+      ],
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000049",
+    "difficulty": "easy",
+    "transformation": [
+      [
+        "rotate_270",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  },
+  {
+    "puzzle_id": "synthetic_000050",
+    "difficulty": "medium",
+    "transformation": [
+      [
+        "rotate_270",
+        {}
+      ],
+      [
+        "rotate_180",
+        {}
+      ]
+    ],
+    "accuracy": 1.0,
+    "time": 0
+  }
+]

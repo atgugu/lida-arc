@@ -16,3 +16,49 @@ Generation complete!
   Validity rate: 98.0%
 
 Testing solvability with current solver...
+
+Solve testing complete!
+  Time: 56.8s
+  Solved: 46/50 (92.0%)
+
+Saved statistics to: results/self_play_solvability_test/generation_statistics.txt
+Saved 50 puzzles to: results/self_play_solvability_test/generated_puzzles.json
+Saved 46 solved puzzles to: results/self_play_solvability_test/solved_puzzles.json
+
+======================================================================
+SELF-PLAY GENERATION STATISTICS
+======================================================================
+
+Total generated: 51
+Valid puzzles: 50 (98.0%)
+
+Invalid reasons:
+  Trivial transformation (identity): 1 (2.0%)
+
+By difficulty:
+  easy:
+    Generated: 15
+    Valid: 15 (100.0%)
+    Solved: 15 (100.0%)
+  medium:
+    Generated: 30
+    Valid: 29 (96.7%)
+    Solved: 27 (93.1%)
+  hard:
+    Generated: 6
+    Valid: 6 (100.0%)
+    Solved: 4 (66.7%)
+
+Solve times:
+  Average: 0.00s
+  Min: 0.00s
+  Max: 0.00s
+======================================================================
+
+======================================================================
+TARGET VALIDATION
+======================================================================
+✓ Validity rate: 98.0% (target: 80.0%)
+✗ Solve rate: 92.0% (target: 40.0-60.0%)
+  ⚠ Puzzles too easy - need harder transformations
+======================================================================

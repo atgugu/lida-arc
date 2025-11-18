@@ -1,0 +1,28 @@
+======================================================================
+SELF-PLAY PUZZLE GENERATION - PROOF OF CONCEPT
+======================================================================
+
+Target: Generate 1000 puzzles
+Difficulty distribution: {'easy': 0.1, 'medium': 0.3, 'hard': 0.6}
+Test solvability: True
+Output directory: results/self_play_1k
+
+Generating puzzles...
+  Generated 100/1000 valid puzzles (105 attempts, 2127.5 valid/s)
+  Generated 200/1000 valid puzzles (207 attempts, 2415.1 valid/s)
+  Generated 300/1000 valid puzzles (309 attempts, 2475.4 valid/s)
+  Generated 400/1000 valid puzzles (412 attempts, 2444.8 valid/s)
+  Generated 500/1000 valid puzzles (518 attempts, 2508.0 valid/s)
+  Generated 600/1000 valid puzzles (621 attempts, 2399.9 valid/s)
+  Generated 700/1000 valid puzzles (721 attempts, 2412.5 valid/s)
+  Generated 800/1000 valid puzzles (822 attempts, 2464.8 valid/s)
+  Generated 900/1000 valid puzzles (926 attempts, 2524.7 valid/s)
+  Generated 1000/1000 valid puzzles (1029 attempts, 2523.8 valid/s)
+
+Generation complete!
+  Time: 0.4s
+  Valid puzzles: 1000
+  Attempts: 1029
+  Validity rate: 97.2%
+
+Testing solvability with current solver...

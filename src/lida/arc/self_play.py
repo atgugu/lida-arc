@@ -134,34 +134,50 @@ class TransformationSampler:
 
     def __init__(self, primitive_library: PrimitiveLibrary):
         self.primitives = primitive_library
-        # Primitives that don't require complex parameters
+        # Simple operations (no parameters)
         self.simple_ops = [
             'rotate_90', 'rotate_180', 'rotate_270',
             'reflect_horizontal', 'reflect_vertical', 'reflect_diagonal',
             'auto_crop'
+        ]
+        # Parametric operations (require parameters)
+        self.parametric_ops = [
+            'recolor',  # Color mapping
+            'tile',     # Tiling with repeats
         ]
 
     def sample_transformation(self, difficulty: str = 'medium') -> List[Tuple[str, Dict]]:
         """Sample a transformation sequence based on difficulty.
 
         Args:
-            difficulty: 'easy' (1 op), 'medium' (2-3 ops), 'hard' (3-5 ops)
+            difficulty: 'easy' (1 op, simple), 'medium' (2-3 ops, some parametric),
+                       'hard' (3-5 ops, more parametric)
 
         Returns:
             List of (operation_name, parameters) tuples
         """
         if difficulty == 'easy':
             num_ops = 1
+            use_parametric = False  # Easy = simple only
         elif difficulty == 'medium':
             num_ops = random.randint(2, 3)
+            use_parametric = random.random() < 0.3  # 30% chance parametric
         elif difficulty == 'hard':
             num_ops = random.randint(3, 5)
+            use_parametric = random.random() < 0.6  # 60% chance parametric
         else:
             raise ValueError(f"Unknown difficulty: {difficulty}")
 
         transformation = []
         for _ in range(num_ops):
-            op_name = random.choice(self.simple_ops)
+            # Choose operation type
+            if use_parametric and random.random() < 0.4:
+                # Use parametric operation
+                op_name = random.choice(self.parametric_ops)
+            else:
+                # Use simple operation
+                op_name = random.choice(self.simple_ops)
+
             params = self._sample_parameters(op_name)
             transformation.append((op_name, params))
 
@@ -169,8 +185,24 @@ class TransformationSampler:
 
     def _sample_parameters(self, op_name: str) -> Dict:
         """Sample parameters for an operation."""
-        # For now, simple operations don't need parameters
-        # In future, can add parametric operations with random params
+
+        if op_name == 'recolor':
+            # Generate random color mapping
+            # Map each color 1-9 to a different color
+            colors = list(range(1, 10))
+            random.shuffle(colors)
+            color_map = {i: colors[i-1] for i in range(1, 10)}
+            # Also map 0 (background) to 0
+            color_map[0] = 0
+            return {'color_map': color_map}
+
+        elif op_name == 'tile':
+            # Random tiling factors (2x2, 2x3, 3x2, 3x3)
+            repeat_v = random.randint(2, 3)
+            repeat_h = random.randint(2, 3)
+            return {'repeat_v': repeat_v, 'repeat_h': repeat_h}
+
+        # Simple operations don't need parameters
         return {}
 
 
@@ -281,12 +313,20 @@ class PrimitiveCompositionGenerator:
                 return None
 
             try:
-                if params:
+                if op_name == 'recolor' and 'color_map' in params:
+                    # Recolor operation
+                    current = prim.execute(current, params['color_map'])
+                elif op_name == 'tile' and params:
+                    # Tile operation
+                    current = prim.execute(current, params['repeat_v'], params['repeat_h'])
+                elif params:
+                    # Generic parametric operation
                     current = prim.execute(current, **params)
                 else:
+                    # Simple operation (no parameters)
                     current = prim.execute(current)
             except Exception:
-                # Transformation failed (e.g., invalid parameters)
+                # Transformation failed (e.g., invalid parameters, grid too large after tiling)
                 return None
 
         return current
