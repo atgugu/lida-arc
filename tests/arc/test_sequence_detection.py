@@ -87,13 +87,13 @@ class TestSequencePruner:
         assert not pruner.is_valid_sequence(['reflect_horizontal', 'reflect_vertical', 'reflect_diagonal'])
 
     def test_geometric_after_color_pruned(self):
-        """Geometric operations after color operations are unusual, prune them."""
+        """UPDATED: Geometric operations after color are now allowed (Stage 1 improvement)."""
         pruner = SequencePruner()
 
-        # Color then geometric = invalid (unusual pattern)
-        assert not pruner.is_valid_sequence(['recolor', 'rotate_90'])
+        # Color then geometric = NOW VALID (constraint removed in Stage 1)
+        assert pruner.is_valid_sequence(['recolor', 'rotate_90'])
 
-        # Geometric then color = valid (common pattern)
+        # Geometric then color = valid (always was)
         assert pruner.is_valid_sequence(['rotate_90', 'recolor'])
 
     def test_valid_sequences(self):

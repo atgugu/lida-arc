@@ -107,21 +107,21 @@ class SequencePruner:
         if reflection_count > 2:
             return False
 
-        # Color operations generally come last
-        # (Rotating after recoloring is uncommon in ARC tasks)
-        color_ops = {'recolor', 'fill_background'}
-        geometric_ops = set(rotation_ops + reflection_ops)
-
-        last_color_idx = -1
-        for i, op in enumerate(sequence):
-            if op in color_ops:
-                last_color_idx = i
-
-        if last_color_idx != -1:
-            # Check if any geometric operation comes after color operation
-            for i in range(last_color_idx + 1, len(sequence)):
-                if sequence[i] in geometric_ops:
-                    return False  # Geometric after color is unusual
+        # STAGE 1 IMPROVEMENT: Disabled color-after-geometric constraint
+        # This constraint prevented sequences like: recolor → rotate
+        # Allowing more flexible ordering may help find novel compositions
+        #
+        # Original constraint (now disabled):
+        # color_ops = {'recolor', 'fill_background'}
+        # geometric_ops = set(rotation_ops + reflection_ops)
+        # last_color_idx = -1
+        # for i, op in enumerate(sequence):
+        #     if op in color_ops:
+        #         last_color_idx = i
+        # if last_color_idx != -1:
+        #     for i in range(last_color_idx + 1, len(sequence)):
+        #         if sequence[i] in geometric_ops:
+        #             return False  # Geometric after color is unusual
 
         return True
 
