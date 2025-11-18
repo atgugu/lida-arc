@@ -96,6 +96,32 @@ class ARCCodeletFactory:
         if self.debug:
             print(f"[Codelet] {msg}")
 
+    @staticmethod
+    def _infer_color_mapping(grid1, grid2):
+        """Infer color mapping between two grids (same as demonstration.py)."""
+        if not grid1 or not grid2:
+            return None
+        if len(grid1) != len(grid2) or len(grid1[0]) != len(grid2[0]):
+            return None
+
+        color_map = {}
+        for r in range(len(grid1)):
+            for c in range(len(grid1[0])):
+                in_color = grid1[r][c]
+                out_color = grid2[r][c]
+
+                if in_color in color_map:
+                    if color_map[in_color] != out_color:
+                        return None  # Inconsistent mapping
+                else:
+                    color_map[in_color] = out_color
+
+        # Only return if it's actually a transformation
+        if any(k != v for k, v in color_map.items()):
+            return color_map
+
+        return None
+
     def make_understanding_codelets(self) -> List[Codelet]:
         """Create codelets for understanding phase: analyze demos and generate hypotheses."""
 
@@ -249,8 +275,20 @@ class ARCCodeletFactory:
                     try:
                         for op_name in hyp.pattern.grid_operations:
                             prim = self.primitives.get(op_name)
-                            if op_name == 'recolor' and hyp.pattern.color_mapping:
-                                result = prim.execute(result, hyp.pattern.color_mapping)
+
+                            if op_name == 'recolor':
+                                # CRITICAL: For multi-op sequences, dynamically infer color mapping
+                                if len(hyp.pattern.grid_operations) > 1:
+                                    # Infer mapping from current result to expected output
+                                    color_mapping = self._infer_color_mapping(result, demo.output)
+                                    if not color_mapping:
+                                        raise ValueError("Cannot infer color mapping")
+                                    result = prim.execute(result, color_mapping)
+                                elif hyp.pattern.color_mapping:
+                                    # Single recolor: use stored mapping
+                                    result = prim.execute(result, hyp.pattern.color_mapping)
+                                else:
+                                    raise ValueError("No color mapping available")
                             else:
                                 result = prim.execute(result)
 

@@ -46,6 +46,9 @@ class ARCSolverConfig:
     relevance_weight: float = 0.3
     novelty_weight: float = 0.2
 
+    # Multi-prediction strategy (ARC-AGI allows 2 predictions per test)
+    max_predictions: int = 2  # Generate up to k diverse predictions
+
     # PAM spreading activation parameters
     pam_iterations: int = 5
     pam_decay: float = 0.1
@@ -107,8 +110,10 @@ class ARCCognitiveSolver:
         # Task state
         self.current_task: Optional[ARCTask] = None
         self.current_test_index: int = 0
-        self.winning_coalition_id: Optional[str] = None
+        self.winning_coalition_id: Optional[str] = None  # Primary winner (backward compat)
+        self.winning_coalitions: List = []  # All winning coalitions for multi-prediction
         self.cycle_count = 0
+        self.all_predictions: List = []  # Store multiple predictions for diversity filtering
 
         # Setup cognitive cycle hooks
         self._setup_cycle_hooks()
@@ -199,11 +204,32 @@ class ARCCognitiveSolver:
 
                 coalitions = validated_coalitions
 
-                # Compete in global workspace
+                # Compete in global workspace (traditional single winner)
                 winner, scores = self.global_workspace.compete(coalitions)
 
+                # MULTI-PREDICTION STRATEGY: Select top-k diverse patterns
+                # ARC-AGI allows 2 predictions per test - we want the top-k patterns by salience
+                # that produce DIFFERENT test outputs
+                if self.config.max_predictions > 1 and len(coalitions) > 1:
+                    # Sort coalitions by salience (descending)
+                    sorted_coalitions = sorted(coalitions, key=lambda c: c.salience, reverse=True)
+
+                    # Take top-k candidates
+                    self.winning_coalitions = sorted_coalitions[:self.config.max_predictions]
+
+                    if self.config.debug:
+                        self._debug(f"  Multi-prediction mode: selected {len(self.winning_coalitions)} top patterns")
+                        for i, coal in enumerate(self.winning_coalitions):
+                            self._debug(f"    {i+1}. {coal.id}: {coal.summary} (salience={coal.salience:.3f})")
+
+                    # Primary winner for backward compatibility
+                    self.winning_coalition_id = self.winning_coalitions[0].id if self.winning_coalitions else None
+                else:
+                    # Single prediction mode (traditional)
+                    self.winning_coalitions = [winner] if winner else []
+                    self.winning_coalition_id = winner.id if winner else None
+
                 if winner:
-                    self.winning_coalition_id = winner.id
                     self._log(f"Attention: Winner = {winner.summary} (salience={winner.salience:.3f})")
 
                     if self.config.debug:
@@ -211,7 +237,7 @@ class ARCCognitiveSolver:
                         for cid, score in sorted(scores, key=lambda x: x[1], reverse=True):
                             self._debug(f"    {cid}: {score:.3f}")
 
-                    # Broadcast to workspace
+                    # Broadcast primary winner to workspace
                     conscious_content = self.global_workspace.broadcast(
                         cycle_index=self.cycle_count,
                         winning=winner
@@ -317,7 +343,7 @@ class ARCCognitiveSolver:
 
     def evaluate(self, task: ARCTask, test_index: int = 0) -> Dict[str, Any]:
         """
-        Solve and evaluate an ARC task.
+        Solve and evaluate an ARC task with multi-prediction support.
 
         Args:
             task: ARC task to solve
@@ -326,25 +352,85 @@ class ARCCognitiveSolver:
         Returns:
             Evaluation metrics
         """
-        # Solve task
+        # Solve task (runs cognitive cycles, sets winning_coalitions)
         predicted = self.solve(task, test_index)
 
-        # Evaluate
+        # MULTI-PREDICTION: After solving, apply all winning patterns
+        all_predictions = [predicted] if predicted else []
+
+        if self.config.max_predictions > 1 and len(self.winning_coalitions) > 1:
+            # Apply all other winning patterns to test input
+            test_input = task.test[test_index].input
+
+            for i, coalition in enumerate(self.winning_coalitions[1:], start=2):  # Skip first (already applied)
+                # Find the corresponding hypothesis
+                hyp = next((h for h in self.codelet_factory.hypotheses if h.hypothesis_id == coalition.id), None)
+
+                if hyp and hyp.pattern:
+                    try:
+                        # Apply pattern to test input
+                        result = test_input
+                        for op_name in hyp.pattern.grid_operations:
+                            prim = self.primitives.get(op_name)
+                            if not prim:
+                                break
+
+                            if op_name == 'recolor' and hyp.pattern.color_mapping:
+                                result = prim.execute(result, hyp.pattern.color_mapping)
+                            else:
+                                result = prim.execute(result)
+
+                        # DIVERSITY FILTER: Only add if different from existing predictions
+                        if result not in all_predictions:
+                            all_predictions.append(result)
+                            if self.config.debug:
+                                self._debug(f"  Added prediction #{len(all_predictions)}: {coalition.id}")
+                        elif self.config.debug:
+                            self._debug(f"  Skipped duplicate prediction from: {coalition.id}")
+
+                    except Exception as e:
+                        if self.config.debug:
+                            self._debug(f"  Failed to apply pattern {coalition.id}: {e}")
+
+            if self.config.debug and len(all_predictions) > 1:
+                self._debug(f"Generated {len(all_predictions)} diverse predictions")
+
+        # Evaluate: Try all predictions, success if ANY matches
         env = ARCEnvironment(task)
         env.set_test(test_index)
 
-        if predicted is None:
+        if not all_predictions or all_predictions[0] is None:
             return {
                 'task_id': task.task_id,
                 'test_index': test_index,
                 'solved': False,
                 'accuracy': 0.0,
                 'exact_match': False,
+                'predictions_tried': 0,
                 'error': 'No output produced'
             }
 
-        accuracy = env.validate_output(predicted)
-        exact_match = env.is_correct(predicted)
+        # Try each prediction
+        best_accuracy = 0.0
+        exact_match = False
+        for i, predicted in enumerate(all_predictions):
+            accuracy = env.validate_output(predicted)
+            is_exact = env.is_correct(predicted)
+
+            if is_exact:
+                exact_match = True
+                best_accuracy = 1.0
+                if self.config.debug:
+                    self._debug(f"  ✓ Prediction #{i+1} SOLVED the task!")
+                break  # Found exact match!
+
+            best_accuracy = max(best_accuracy, accuracy)
+
+        accuracy = best_accuracy
+        exact_match = exact_match
+
+        # Use first prediction for shape reporting
+        first_pred = all_predictions[0] if all_predictions else None
 
         return {
             'task_id': task.task_id,
@@ -352,7 +438,8 @@ class ARCCognitiveSolver:
             'solved': exact_match,
             'accuracy': accuracy,
             'exact_match': exact_match,
-            'predicted_shape': (len(predicted), len(predicted[0]) if predicted else 0),
+            'predictions_tried': len(all_predictions),
+            'predicted_shape': (len(first_pred), len(first_pred[0]) if first_pred else 0) if first_pred else (0, 0),
             'expected_shape': (len(task.test[test_index].output), len(task.test[test_index].output[0]) if task.test[test_index].output else 0)
         }
 
@@ -419,6 +506,8 @@ class ARCCognitiveSolver:
         self.codelet_factory.set_task([], [])
         self.cycle_count = 0
         self.winning_coalition_id = None
+        self.winning_coalitions = []
+        self.all_predictions = []
 
         # CRITICAL FIX: Reset the cycle engine's internal state
         # Without this, _cycle_index accumulates across tasks causing
