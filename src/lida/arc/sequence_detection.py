@@ -304,6 +304,97 @@ class SequenceDetector:
             # No parameters needed (always sets to background/0)
             variants.append((op_name, {}))
 
+        elif op_name in ['dilate', 'erode']:
+            # Morphological operations: try different colors and iteration counts
+            try:
+                if current_grid:
+                    current_colors = set()
+                    for row in current_grid:
+                        current_colors.update(row)
+
+                    # Try each non-background color with 1-3 iterations
+                    for color in current_colors:
+                        if color != 0:  # Don't dilate/erode background
+                            for iters in [1, 2, 3]:
+                                variants.append((op_name, {
+                                    'color': color,
+                                    'iterations': iters,
+                                    'background': 0
+                                }))
+            except (KeyError, IndexError, TypeError):
+                pass
+
+        elif op_name == 'flood_fill':
+            # Flood fill: try replacing each color with other colors
+            try:
+                if current_grid and target_grid:
+                    current_colors = set()
+                    target_colors = set()
+                    for row in current_grid:
+                        current_colors.update(row)
+                    for row in target_grid:
+                        target_colors.update(row)
+
+                    # Try filling each current color with each target color
+                    for source_c in list(current_colors)[:3]:
+                        for fill_c in list(target_colors)[:3]:
+                            if source_c != fill_c:
+                                variants.append((op_name, {
+                                    'source_color': source_c,
+                                    'fill_color': fill_c
+                                }))
+            except (KeyError, IndexError, TypeError):
+                pass
+
+        elif op_name == 'fill_enclosed':
+            # Fill enclosed: try different boundary and fill colors
+            try:
+                if current_grid and target_grid:
+                    current_colors = set()
+                    target_colors = set()
+                    for row in current_grid:
+                        current_colors.update(row)
+                    for row in target_grid:
+                        target_colors.update(row)
+
+                    # Try each non-background color as boundary
+                    for boundary_c in list(current_colors)[:3]:
+                        if boundary_c != 0:
+                            for fill_c in list(target_colors)[:2]:
+                                if fill_c != 0 and fill_c != boundary_c:
+                                    variants.append((op_name, {
+                                        'boundary_color': boundary_c,
+                                        'fill_color': fill_c,
+                                        'background': 0
+                                    }))
+            except (KeyError, IndexError, TypeError):
+                pass
+
+        elif op_name == 'spread_to_neighbors':
+            # Spread: try spreading each color into another
+            try:
+                if current_grid:
+                    current_colors = set()
+                    for row in current_grid:
+                        current_colors.update(row)
+
+                    # Try spreading non-background into background or other colors
+                    for source_c in list(current_colors)[:3]:
+                        if source_c != 0:
+                            # Spread into background
+                            variants.append((op_name, {
+                                'source_color': source_c,
+                                'target_color': 0,
+                                'iterations': 1
+                            }))
+                            variants.append((op_name, {
+                                'source_color': source_c,
+                                'target_color': 0,
+                                'iterations': 2
+                            }))
+            except (KeyError, IndexError, TypeError):
+                pass
+
         else:
             # No parameters needed
             variants.append((op_name, {}))
@@ -464,6 +555,22 @@ class SequenceDetector:
                             elif op_name == 'remove_if_isolated':
                                 # Remove isolated pixels (no params needed)
                                 result_grid = prim.execute(result_grid)
+
+                            elif op_name in ['dilate', 'erode'] and params:
+                                # Morphological operations with iterations
+                                result_grid = prim.execute(result_grid, params['color'], params['iterations'], params.get('background', 0))
+
+                            elif op_name == 'flood_fill' and params:
+                                # Flood fill operation
+                                result_grid = prim.execute(result_grid, params['source_color'], params['fill_color'])
+
+                            elif op_name == 'fill_enclosed' and params:
+                                # Fill enclosed regions
+                                result_grid = prim.execute(result_grid, params['boundary_color'], params['fill_color'], params.get('background', 0))
+
+                            elif op_name == 'spread_to_neighbors' and params:
+                                # Propagation operation
+                                result_grid = prim.execute(result_grid, params['source_color'], params['target_color'], params.get('iterations', 1))
 
                             else:
                                 # No parameters needed

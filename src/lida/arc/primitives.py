@@ -1226,6 +1226,293 @@ class RemoveIfIsolatedPrimitive(ConditionalPrimitive):
 
 
 # =============================================================================
+# MORPHOLOGICAL / ITERATIVE PRIMITIVES
+# =============================================================================
+
+class DilatePrimitive(Primitive):
+    """Expand regions of specified color by N iterations (morphological dilation)."""
+
+    def __init__(self):
+        super().__init__('dilate', 'morphology')
+
+    def execute(self, grid: List[List[int]], color: int, iterations: int = 1,
+                background: int = 0) -> List[List[int]]:
+        """Expand pixels of 'color' into 'background' by N steps.
+
+        Args:
+            grid: Input grid
+            color: Color to expand
+            iterations: Number of dilation steps
+            background: Color to expand into (default: 0)
+
+        Returns:
+            Grid with dilated regions
+        """
+        result = [row[:] for row in grid]
+
+        for _ in range(iterations):
+            result = self._dilate_once(result, color, background)
+
+        return result
+
+    def _dilate_once(self, grid: List[List[int]], color: int, background: int) -> List[List[int]]:
+        """Perform one dilation step."""
+        result = [row[:] for row in grid]
+        height = len(grid)
+        width = len(grid[0]) if grid else 0
+
+        for r in range(height):
+            for c in range(width):
+                if grid[r][c] == background:
+                    # Check if any neighbor is the target color
+                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        nr, nc = r + dr, c + dc
+                        if 0 <= nr < height and 0 <= nc < width:
+                            if grid[nr][nc] == color:
+                                result[r][c] = color
+                                break
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'morphology': 1.0,
+            'expansion': 1.0,
+            'iterative': 1.0,
+            'spatial': 1.0,
+        }
+
+
+class ErodePrimitive(Primitive):
+    """Shrink regions of specified color by N iterations (morphological erosion)."""
+
+    def __init__(self):
+        super().__init__('erode', 'morphology')
+
+    def execute(self, grid: List[List[int]], color: int, iterations: int = 1,
+                background: int = 0) -> List[List[int]]:
+        """Shrink pixels of 'color' that border 'background'.
+
+        Args:
+            grid: Input grid
+            color: Color to shrink
+            iterations: Number of erosion steps
+            background: Color to erode to (default: 0)
+
+        Returns:
+            Grid with eroded regions
+        """
+        result = [row[:] for row in grid]
+
+        for _ in range(iterations):
+            result = self._erode_once(result, color, background)
+
+        return result
+
+    def _erode_once(self, grid: List[List[int]], color: int, background: int) -> List[List[int]]:
+        """Perform one erosion step."""
+        result = [row[:] for row in grid]
+        height = len(grid)
+        width = len(grid[0]) if grid else 0
+
+        for r in range(height):
+            for c in range(width):
+                if grid[r][c] == color:
+                    # Check if any neighbor is background
+                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        nr, nc = r + dr, c + dc
+                        if 0 <= nr < height and 0 <= nc < width:
+                            if grid[nr][nc] == background:
+                                result[r][c] = background
+                                break
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'morphology': 1.0,
+            'shrinking': 1.0,
+            'iterative': 1.0,
+            'spatial': 1.0,
+        }
+
+
+class FloodFillPrimitive(Primitive):
+    """Fill all connected regions of source color with fill color."""
+
+    def __init__(self):
+        super().__init__('flood_fill', 'morphology')
+
+    def execute(self, grid: List[List[int]], source_color: int, fill_color: int) -> List[List[int]]:
+        """Fill all connected components of source_color with fill_color.
+
+        Args:
+            grid: Input grid
+            source_color: Color of regions to fill
+            fill_color: Color to fill with
+
+        Returns:
+            Grid with filled regions
+        """
+        result = [row[:] for row in grid]
+        height = len(grid)
+        width = len(grid[0]) if grid else 0
+        visited = set()
+
+        for r in range(height):
+            for c in range(width):
+                if grid[r][c] == source_color and (r, c) not in visited:
+                    self._flood_fill_region(result, r, c, source_color, fill_color, visited)
+
+        return result
+
+    def _flood_fill_region(self, grid: List[List[int]], start_r: int, start_c: int,
+                           source_color: int, fill_color: int, visited: set):
+        """BFS flood fill from starting position."""
+        height = len(grid)
+        width = len(grid[0]) if grid else 0
+        queue = [(start_r, start_c)]
+        visited.add((start_r, start_c))
+
+        while queue:
+            r, c = queue.pop(0)
+            grid[r][c] = fill_color
+
+            # Check 4-connected neighbors
+            for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nr, nc = r + dr, c + dc
+                if (0 <= nr < height and 0 <= nc < width and
+                    (nr, nc) not in visited and grid[nr][nc] == source_color):
+                    visited.add((nr, nc))
+                    queue.append((nr, nc))
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'morphology': 1.0,
+            'filling': 1.0,
+            'connectivity': 1.0,
+            'spatial': 1.0,
+        }
+
+
+class FillEnclosedPrimitive(Primitive):
+    """Fill regions enclosed by boundary color."""
+
+    def __init__(self):
+        super().__init__('fill_enclosed', 'morphology')
+
+    def execute(self, grid: List[List[int]], boundary_color: int, fill_color: int,
+                background: int = 0) -> List[List[int]]:
+        """Fill holes: regions of background surrounded by boundary.
+
+        Args:
+            grid: Input grid
+            boundary_color: Color of enclosing boundary
+            fill_color: Color to fill enclosed regions with
+            background: Background color (default: 0)
+
+        Returns:
+            Grid with filled enclosed regions
+        """
+        height = len(grid)
+        width = len(grid[0]) if grid else 0
+        result = [row[:] for row in grid]
+
+        # Flood fill from edges to mark exterior regions
+        exterior = set()
+        queue = []
+
+        # Add all edge cells that are background
+        for r in range(height):
+            for c in range(width):
+                if (r == 0 or r == height - 1 or c == 0 or c == width - 1):
+                    if grid[r][c] == background:
+                        queue.append((r, c))
+                        exterior.add((r, c))
+
+        # BFS to mark all exterior background cells
+        while queue:
+            r, c = queue.pop(0)
+
+            for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nr, nc = r + dr, c + dc
+                if (0 <= nr < height and 0 <= nc < width and
+                    (nr, nc) not in exterior and grid[nr][nc] == background):
+                    exterior.add((nr, nc))
+                    queue.append((nr, nc))
+
+        # Fill interior (non-exterior) background cells
+        for r in range(height):
+            for c in range(width):
+                if grid[r][c] == background and (r, c) not in exterior:
+                    result[r][c] = fill_color
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'morphology': 1.0,
+            'filling': 1.0,
+            'hole_filling': 1.0,
+            'spatial': 1.0,
+        }
+
+
+class SpreadToNeighborsPrimitive(Primitive):
+    """Spread source color to adjacent target pixels, N times."""
+
+    def __init__(self):
+        super().__init__('spread_to_neighbors', 'morphology')
+
+    def execute(self, grid: List[List[int]], source_color: int, target_color: int,
+                iterations: int = 1) -> List[List[int]]:
+        """Propagate source_color into target_color regions.
+
+        Args:
+            grid: Input grid
+            source_color: Color that spreads
+            target_color: Color that gets replaced
+            iterations: Number of propagation steps
+
+        Returns:
+            Grid after propagation
+        """
+        result = [row[:] for row in grid]
+
+        for _ in range(iterations):
+            result = self._spread_once(result, source_color, target_color)
+
+        return result
+
+    def _spread_once(self, grid: List[List[int]], source_color: int, target_color: int) -> List[List[int]]:
+        """Perform one propagation step."""
+        result = [row[:] for row in grid]
+        height = len(grid)
+        width = len(grid[0]) if grid else 0
+
+        for r in range(height):
+            for c in range(width):
+                if grid[r][c] == target_color:
+                    # Check if any neighbor is source_color
+                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        nr, nc = r + dr, c + dc
+                        if 0 <= nr < height and 0 <= nc < width:
+                            if grid[nr][nc] == source_color:
+                                result[r][c] = source_color
+                                break
+
+        return result
+
+    def get_features(self) -> Dict[str, float]:
+        return {
+            'morphology': 1.0,
+            'propagation': 1.0,
+            'iterative': 1.0,
+            'spatial': 1.0,
+        }
+
+
+# =============================================================================
 # PRIMITIVE LIBRARY
 # =============================================================================
 
@@ -1278,6 +1565,13 @@ class PrimitiveLibrary:
         self.register(RecolorIfIsolatedPrimitive())
         self.register(RecolorIfOnEdgePrimitive())
         self.register(RemoveIfIsolatedPrimitive())
+
+        # Morphological/Iterative (5)
+        self.register(DilatePrimitive())
+        self.register(ErodePrimitive())
+        self.register(FloodFillPrimitive())
+        self.register(FillEnclosedPrimitive())
+        self.register(SpreadToNeighborsPrimitive())
 
     def register(self, primitive: Primitive):
         """Add a primitive to the library."""

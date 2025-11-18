@@ -334,6 +334,37 @@ class ARCCodeletFactory:
                                     target_color = params.get('target_color', None)
                                     result = prim.execute(result, target_color)
 
+                                elif op_name in ['dilate', 'erode']:
+                                    # Morphological operations
+                                    params = hyp.pattern.operation_params
+                                    color = params.get('color', 1)
+                                    iterations = params.get('iterations', 1)
+                                    background = params.get('background', 0)
+                                    result = prim.execute(result, color, iterations, background)
+
+                                elif op_name == 'flood_fill':
+                                    # Flood fill operation
+                                    params = hyp.pattern.operation_params
+                                    source_color = params.get('source_color', 1)
+                                    fill_color = params.get('fill_color', 2)
+                                    result = prim.execute(result, source_color, fill_color)
+
+                                elif op_name == 'fill_enclosed':
+                                    # Fill enclosed regions
+                                    params = hyp.pattern.operation_params
+                                    boundary_color = params.get('boundary_color', 1)
+                                    fill_color = params.get('fill_color', 2)
+                                    background = params.get('background', 0)
+                                    result = prim.execute(result, boundary_color, fill_color, background)
+
+                                elif op_name == 'spread_to_neighbors':
+                                    # Propagation operation
+                                    params = hyp.pattern.operation_params
+                                    source_color = params.get('source_color', 1)
+                                    target_color = params.get('target_color', 0)
+                                    iterations = params.get('iterations', 1)
+                                    result = prim.execute(result, source_color, target_color, iterations)
+
                                 else:
                                     # No parameters needed
                                     result = prim.execute(result)
@@ -553,6 +584,41 @@ class ARCCodeletFactory:
                             target_color = params.get('target_color', None)
                             self._debug(f"        Applying remove_if_isolated")
                             result = prim.execute(result, target_color)
+
+                        elif op_name in ['dilate', 'erode']:
+                            # Morphological operations
+                            params = self.winning_pattern.operation_params
+                            color = params.get('color', 1)
+                            iterations = params.get('iterations', 1)
+                            background = params.get('background', 0)
+                            self._debug(f"        Applying {op_name} (color={color}, iterations={iterations})")
+                            result = prim.execute(result, color, iterations, background)
+
+                        elif op_name == 'flood_fill':
+                            # Flood fill operation
+                            params = self.winning_pattern.operation_params
+                            source_color = params.get('source_color', 1)
+                            fill_color = params.get('fill_color', 2)
+                            self._debug(f"        Applying flood_fill (source={source_color}, fill={fill_color})")
+                            result = prim.execute(result, source_color, fill_color)
+
+                        elif op_name == 'fill_enclosed':
+                            # Fill enclosed regions
+                            params = self.winning_pattern.operation_params
+                            boundary_color = params.get('boundary_color', 1)
+                            fill_color = params.get('fill_color', 2)
+                            background = params.get('background', 0)
+                            self._debug(f"        Applying fill_enclosed (boundary={boundary_color}, fill={fill_color})")
+                            result = prim.execute(result, boundary_color, fill_color, background)
+
+                        elif op_name == 'spread_to_neighbors':
+                            # Propagation operation
+                            params = self.winning_pattern.operation_params
+                            source_color = params.get('source_color', 1)
+                            target_color = params.get('target_color', 0)
+                            iterations = params.get('iterations', 1)
+                            self._debug(f"        Applying spread_to_neighbors (source={source_color}, target={target_color}, iters={iterations})")
+                            result = prim.execute(result, source_color, target_color, iterations)
 
                         else:
                             # No parameters needed
