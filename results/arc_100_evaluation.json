@@ -2,26 +2,26 @@
   "baseline": {
     "max_predictions": 1,
     "total_tasks": 49,
-    "exact_matches": 9,
-    "solve_rate": 0.1836734693877551,
-    "average_accuracy": 0.19557823129251703,
-    "total_time": 30.499391794204712,
+    "exact_matches": 11,
+    "solve_rate": 0.22448979591836735,
+    "average_accuracy": 0.24319727891156462,
+    "total_time": 63.279669761657715,
     "predictions_stats": {
-      "1": 11,
-      "0": 38
+      "1": 13,
+      "0": 36
     }
   },
   "multi_prediction": {
     "max_predictions": 2,
     "total_tasks": 49,
-    "exact_matches": 9,
-    "solve_rate": 0.1836734693877551,
-    "average_accuracy": 0.2074829931972789,
-    "total_time": 30.78182339668274,
+    "exact_matches": 11,
+    "solve_rate": 0.22448979591836735,
+    "average_accuracy": 0.24319727891156462,
+    "total_time": 61.87006902694702,
     "predictions_stats": {
-      "2": 9,
-      "1": 2,
-      "0": 38
+      "1": 8,
+      "2": 5,
+      "0": 36
     }
   },
   "improvement": {
