@@ -26,3 +26,59 @@ Generation complete!
   Validity rate: 97.2%
 
 Testing solvability with current solver...
+  Tested 100/1000 puzzles (55 solved, 0.5 tests/s)
+  Tested 200/1000 puzzles (112 solved, 0.4 tests/s)
+  Tested 300/1000 puzzles (170 solved, 0.4 tests/s)
+  Tested 400/1000 puzzles (228 solved, 0.3 tests/s)
+  Tested 500/1000 puzzles (277 solved, 0.3 tests/s)
+  Tested 600/1000 puzzles (334 solved, 0.3 tests/s)
+  Tested 700/1000 puzzles (401 solved, 0.3 tests/s)
+  Tested 800/1000 puzzles (462 solved, 0.3 tests/s)
+  Tested 900/1000 puzzles (517 solved, 0.3 tests/s)
+  Tested 1000/1000 puzzles (578 solved, 0.3 tests/s)
+
+Solve testing complete!
+  Time: 3695.6s
+  Solved: 578/1000 (57.8%)
+
+Saved statistics to: results/self_play_1k/generation_statistics.txt
+Saved 1000 puzzles to: results/self_play_1k/generated_puzzles.json
+Saved 578 solved puzzles to: results/self_play_1k/solved_puzzles.json
+
+======================================================================
+SELF-PLAY GENERATION STATISTICS
+======================================================================
+
+Total generated: 1029
+Valid puzzles: 1000 (97.2%)
+
+Invalid reasons:
+  Trivial transformation (identity): 29 (2.8%)
+
+By difficulty:
+  easy:
+    Generated: 111
+    Valid: 100 (90.1%)
+    Solved: 100 (100.0%)
+  medium:
+    Generated: 305
+    Valid: 297 (97.4%)
+    Solved: 216 (72.7%)
+  hard:
+    Generated: 613
+    Valid: 603 (98.4%)
+    Solved: 262 (43.4%)
+
+Solve times:
+  Average: 0.00s
+  Min: 0.00s
+  Max: 0.00s
+======================================================================
+
+======================================================================
+TARGET VALIDATION
+======================================================================
+✓ Validity rate: 97.2% (target: 80.0%)
+✓ Solve rate: 57.8% (target: 40.0-60.0%)
+  ✓ Difficulty is in target range!
+======================================================================
