@@ -402,3 +402,11 @@ class ARCCognitiveSolver:
         self.codelet_factory.set_task([], [])
         self.cycle_count = 0
         self.winning_coalition_id = None
+
+        # CRITICAL FIX: Reset the cycle engine's internal state
+        # Without this, _cycle_index accumulates across tasks causing
+        # the cycle to never run after the first task
+        self.cycle_engine._cycle_index = 0
+        self.cycle_engine._running = False
+
+        self._debug("Solver state reset for new task")
