@@ -1,0 +1,24 @@
+======================================================================
+SELF-PLAY GENERATION STATISTICS
+======================================================================
+
+Total generated: 51
+Valid puzzles: 50 (98.0%)
+
+Invalid reasons:
+  Trivial transformation (identity): 1 (2.0%)
+
+By difficulty:
+  easy:
+    Generated: 15
+    Valid: 15 (100.0%)
+    Solved: 0 (0.0%)
+  medium:
+    Generated: 30
+    Valid: 29 (96.7%)
+    Solved: 0 (0.0%)
+  hard:
+    Generated: 6
+    Valid: 6 (100.0%)
+    Solved: 0 (0.0%)
+======================================================================

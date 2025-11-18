@@ -1,0 +1,18 @@
+======================================================================
+SELF-PLAY PUZZLE GENERATION - PROOF OF CONCEPT
+======================================================================
+
+Target: Generate 50 puzzles
+Difficulty distribution: {'easy': 0.3, 'medium': 0.5, 'hard': 0.2}
+Test solvability: True
+Output directory: results/self_play_solvability_test
+
+Generating puzzles...
+
+Generation complete!
+  Time: 0.0s
+  Valid puzzles: 50
+  Attempts: 51
+  Validity rate: 98.0%
+
+Testing solvability with current solver...
