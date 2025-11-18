@@ -1,0 +1,69 @@
+Loading ARC tasks...
+✓ Loaded 49 tasks
+
+======================================================================
+ARC-AGI EVALUATION: SINGLE VS MULTI-PREDICTION
+======================================================================
+
+### BASELINE: Single Prediction (max_predictions=1) ###
+
+Evaluating 49 tasks with max_predictions=1...
+======================================================================
+  Progress: 10/49 tasks (9 solved so far)
+  Progress: 20/49 tasks (10 solved so far)
+  Progress: 30/49 tasks (10 solved so far)
+  Progress: 40/49 tasks (11 solved so far)
+======================================================================
+
+RESULTS (max_predictions=1):
+  Total tasks: 49
+  Exact matches (100% pixel accuracy): 11/49 (22.4%)
+  Average accuracy: 24.3%
+  Average time per task: 2.4s
+
+Prediction statistics:
+  0 prediction(s): 36 tasks
+  1 prediction(s): 13 tasks
+
+### MULTI-PREDICTION: 2 Attempts per Task (max_predictions=2) ###
+
+Evaluating 49 tasks with max_predictions=2...
+======================================================================
+  Progress: 10/49 tasks (9 solved so far)
+  Progress: 20/49 tasks (10 solved so far)
+  Progress: 30/49 tasks (10 solved so far)
+  Progress: 40/49 tasks (11 solved so far)
+======================================================================
+
+RESULTS (max_predictions=2):
+  Total tasks: 49
+  Exact matches (100% pixel accuracy): 11/49 (22.4%)
+  Average accuracy: 24.3%
+  Average time per task: 2.5s
+
+Prediction statistics:
+  0 prediction(s): 36 tasks
+  1 prediction(s): 8 tasks
+  2 prediction(s): 5 tasks
+
+======================================================================
+COMPARISON: Single vs Multi-Prediction
+======================================================================
+
+Exact Match Rate (KEY METRIC):
+  Single prediction:  22.4% (11/49)
+  Multi-prediction:   22.4% (11/49)
+  Improvement:        +0.0% (0 more tasks)
+
+Average Accuracy:
+  Single prediction:  24.3%
+  Multi-prediction:   24.3%
+  Improvement:        +0.0%
+
+= Multi-prediction shows NO CHANGE (all tasks solved or failed with single prediction)
+
+Results saved to: /home/user/lida-arc/results/arc_100_evaluation.json
+
+======================================================================
+EVALUATION COMPLETE
+======================================================================
