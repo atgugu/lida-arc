@@ -100,10 +100,11 @@ class SequencePruner:
         if rotation_count > 1:
             return False
 
-        # No more than one reflection (multiple reflections = identity or single reflection)
+        # Allow at most 2 reflections (rotation + reflection is valid, but 3+ reflections is excessive)
+        # Note: This allows valid combinations like [rotate_90, reflect_vertical]
         reflection_ops = ['reflect_horizontal', 'reflect_vertical', 'reflect_diagonal']
         reflection_count = sum(1 for op in sequence if op in reflection_ops)
-        if reflection_count > 1:
+        if reflection_count > 2:
             return False
 
         # Color operations generally come last
@@ -202,6 +203,32 @@ class SequenceDetector:
         self.beam_width = beam_width
         self.pruner = SequencePruner()
 
+    @staticmethod
+    def _infer_color_mapping(grid1: Grid, grid2: Grid) -> Optional[Dict[int, int]]:
+        """Infer color mapping between two grids of same size."""
+        if not grid1 or not grid2:
+            return None
+        if len(grid1) != len(grid2) or len(grid1[0]) != len(grid2[0]):
+            return None
+
+        color_map = {}
+        for r in range(len(grid1)):
+            for c in range(len(grid1[0])):
+                in_color = grid1[r][c]
+                out_color = grid2[r][c]
+
+                if in_color in color_map:
+                    if color_map[in_color] != out_color:
+                        return None  # Inconsistent mapping
+                else:
+                    color_map[in_color] = out_color
+
+        # Only return if it's actually a transformation
+        if any(k != v for k, v in color_map.items()):
+            return color_map
+
+        return None
+
     def find_sequence(
         self,
         input_grid: Grid,
@@ -263,9 +290,8 @@ class SequenceDetector:
 
                         new_candidates.append(new_candidate)
 
-                        # Early termination if exact match
-                        if new_candidate.distance_to_target == 0:
-                            return new_candidate.sequence
+                        # Note: No early termination - explore all depths to find best solution
+                        # With single training examples, simple solutions might not generalize
 
                     except Exception:
                         # Operation failed, skip this candidate
@@ -278,12 +304,114 @@ class SequenceDetector:
             candidates = self.pruner.prune_beam(new_candidates, self.beam_width)
 
         # Return best candidate found
+        # Prefer: exact matches > closer matches, then shorter sequences
         if candidates:
-            best = min(candidates, key=lambda c: c.distance_to_target)
+            # First try to find exact matches
+            exact_matches = [c for c in candidates if c.distance_to_target == 0]
+
+            if exact_matches:
+                # Among exact matches, prefer shorter sequences (Occam's razor)
+                # But also consider confidence (longer well-validated sequences might be better)
+                best = min(exact_matches, key=lambda c: (len(c.sequence), -c.confidence))
+                return best.sequence
+
+            # No exact match, return closest
+            best = min(candidates, key=lambda c: (c.distance_to_target, len(c.sequence)))
             if best.distance_to_target < 0.5:  # Accept if at least 50% correct
                 return best.sequence
 
         return None
+
+    def find_all_sequences(
+        self,
+        input_grid: Grid,
+        output_grid: Grid,
+        color_mapping: Optional[Dict[int, int]] = None
+    ) -> List[List[str]]:
+        """
+        Find ALL exact-match sequences across all depths.
+
+        Returns:
+            List of sequences that exactly transform input to output,
+            sorted by length (shortest first)
+        """
+        all_exact_matches = []
+
+        # Start with single candidate
+        candidates = [SequenceCandidate(
+            sequence=[],
+            current_grid=copy.deepcopy(input_grid),
+            distance_to_target=GridDistance.compute(input_grid, output_grid),
+            confidence=1.0
+        )]
+
+        # Iterative deepening - collect all exact matches
+        for depth in range(1, self.max_depth + 1):
+            new_candidates = []
+
+            for candidate in candidates:
+                # Don't extend candidates that already match perfectly
+                # (extending a perfect match makes no sense)
+                if candidate.distance_to_target == 0:
+                    continue
+
+                for prim_name in self.primitives.get_all_names():
+                    extended_sequence = candidate.sequence + [prim_name]
+
+                    if not self.pruner.is_valid_sequence(extended_sequence):
+                        continue
+
+                    try:
+                        result_grid = copy.deepcopy(candidate.current_grid)
+                        prim = self.primitives.get(prim_name)
+
+                        # Handle recolor with dynamic color mapping inference
+                        if prim_name == 'recolor':
+                            # Infer color mapping from current grid to target
+                            inferred_mapping = self._infer_color_mapping(candidate.current_grid, output_grid)
+
+                            if inferred_mapping:
+                                result_grid = prim.execute(result_grid, inferred_mapping)
+                            elif color_mapping:
+                                # Fall back to provided mapping
+                                result_grid = prim.execute(result_grid, color_mapping)
+                            else:
+                                # No mapping available, skip
+                                continue
+                        else:
+                            result_grid = prim.execute(result_grid)
+
+                        new_candidate = candidate.extend(
+                            prim_name,
+                            result_grid,
+                            output_grid,
+                            color_mapping
+                        )
+
+                        new_candidates.append(new_candidate)
+
+                        # Collect exact matches
+                        if new_candidate.distance_to_target == 0:
+                            all_exact_matches.append(new_candidate.sequence)
+
+                    except Exception:
+                        continue
+
+            if not new_candidates:
+                break
+
+            candidates = self.pruner.prune_beam(new_candidates, self.beam_width)
+
+        # Sort by length (prefer simpler explanations first)
+        all_exact_matches.sort(key=len)
+
+        # Debug output
+        if False:  # Set to True to debug
+            print(f"[find_all_sequences] Returning {len(all_exact_matches)} sequences")
+            for seq in all_exact_matches[:5]:
+                print(f"[find_all_sequences]   - {seq}")
+
+        return all_exact_matches
 
     def find_sequence_with_ranking(
         self,

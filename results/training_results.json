@@ -5,14 +5,14 @@
   "solved_tasks": 6,
   "solve_rate": 1.0,
   "average_accuracy": 1.0,
-  "average_time_ms": 304.75124066666837,
+  "average_time_ms": 304.2799193333394,
   "task_results": [
     {
       "task_id": "00d62c1b",
       "test_index": 0,
       "solved": true,
       "accuracy": 1.0,
-      "time_ms": 306.5175889999949,
+      "time_ms": 304.1961159999573,
       "error": ""
     },
     {
@@ -20,7 +20,7 @@
       "test_index": 0,
       "solved": true,
       "accuracy": 1.0,
-      "time_ms": 303.72152799999697,
+      "time_ms": 303.18666100004066,
       "error": ""
     },
     {
@@ -28,7 +28,7 @@
       "test_index": 0,
       "solved": true,
       "accuracy": 1.0,
-      "time_ms": 304.52017600001113,
+      "time_ms": 304.1332530000318,
       "error": ""
     },
     {
@@ -36,7 +36,7 @@
       "test_index": 0,
       "solved": true,
       "accuracy": 1.0,
-      "time_ms": 305.49893900000313,
+      "time_ms": 304.8475049999979,
       "error": ""
     },
     {
@@ -44,7 +44,7 @@
       "test_index": 0,
       "solved": true,
       "accuracy": 1.0,
-      "time_ms": 303.98761600000057,
+      "time_ms": 304.94030800002747,
       "error": ""
     },
     {
@@ -52,7 +52,7 @@
       "test_index": 0,
       "solved": true,
       "accuracy": 1.0,
-      "time_ms": 304.26159600000346,
+      "time_ms": 304.37567299998136,
       "error": ""
     }
   ]
