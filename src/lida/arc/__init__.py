@@ -12,6 +12,8 @@ from .demonstration import TransformationPattern, DemonstrationAnalyzer
 from .pam_integration import (
     ARCPAMSeeder, ARCCategoryInduction, ARCHebbianLearning, ARCPAMIntegration
 )
+from .codelets import ARCCodeletFactory, PatternHypothesis
+from .cognitive_solver import ARCCognitiveSolver, ARCSolverConfig
 
 __all__ = [
     'ARCTask',
@@ -28,4 +30,8 @@ __all__ = [
     'ARCCategoryInduction',
     'ARCHebbianLearning',
     'ARCPAMIntegration',
+    'ARCCodeletFactory',
+    'PatternHypothesis',
+    'ARCCognitiveSolver',
+    'ARCSolverConfig',
 ]
