@@ -1,0 +1,33 @@
+Loading ARC tasks...
+✓ Loaded 49 tasks
+
+======================================================================
+ARC-AGI EVALUATION: SINGLE VS MULTI-PREDICTION
+======================================================================
+
+### BASELINE: Single Prediction (max_predictions=1) ###
+
+Evaluating 49 tasks with max_predictions=1...
+======================================================================
+  Progress: 10/49 tasks (9 solved so far)
+  Progress: 20/49 tasks (10 solved so far)
+  Progress: 30/49 tasks (10 solved so far)
+  Progress: 40/49 tasks (11 solved so far)
+======================================================================
+
+RESULTS (max_predictions=1):
+  Total tasks: 49
+  Exact matches (100% pixel accuracy): 11/49 (22.4%)
+  Average accuracy: 23.6%
+  Average time per task: 8.8s
+
+Prediction statistics:
+  0 prediction(s): 36 tasks
+  1 prediction(s): 13 tasks
+
+### MULTI-PREDICTION: 2 Attempts per Task (max_predictions=2) ###
+
+Evaluating 49 tasks with max_predictions=2...
+======================================================================
+  Progress: 10/49 tasks (9 solved so far)
+  Progress: 20/49 tasks (10 solved so far)
