@@ -66,7 +66,8 @@ class ARCCodeletFactory:
         workspace: SituationalModel,
         pam_integration: ARCPAMIntegration,
         primitive_library: PrimitiveLibrary,
-        analyzer: DemonstrationAnalyzer
+        analyzer: DemonstrationAnalyzer,
+        debug: bool = False
     ):
         """
         Args:
@@ -74,11 +75,13 @@ class ARCCodeletFactory:
             pam_integration: PAM integration for spreading activation
             primitive_library: Cognitive primitives
             analyzer: Demonstration analyzer
+            debug: Enable debug logging
         """
         self.workspace = workspace
         self.pam = pam_integration
         self.primitives = primitive_library
         self.analyzer = analyzer
+        self.debug = debug
 
         # Shared state across codelets
         self.demonstrations: List[GridPair] = []
@@ -88,19 +91,41 @@ class ARCCodeletFactory:
         self.winning_pattern: Optional[TransformationPattern] = None
         self.final_output: Optional[List[List[int]]] = None
 
+    def _debug(self, msg: str):
+        """Log debug message if debug enabled."""
+        if self.debug:
+            print(f"[Codelet] {msg}")
+
     def make_understanding_codelets(self) -> List[Codelet]:
         """Create codelets for understanding phase: analyze demos and generate hypotheses."""
 
         def _analyze_demonstrations():
             """Analyze demonstrations to extract patterns."""
+            self._debug("  [arc_analyze_demos] Starting demonstration analysis")
+
             if not self.demonstrations:
+                self._debug("    ⚠ No demonstrations to analyze")
                 return
+
+            self._debug(f"    Analyzing {len(self.demonstrations)} demonstrations")
 
             # Clear previous hypotheses
             self.hypotheses.clear()
 
             # Extract patterns from demonstrations
-            patterns = self.analyzer.analyze_multiple_pairs(self.demonstrations)
+            try:
+                patterns = self.analyzer.analyze_multiple_pairs(self.demonstrations)
+                self._debug(f"    Found {len(patterns)} patterns")
+
+                for i, pattern in enumerate(patterns[:5]):
+                    self._debug(f"      Pattern {i}: {pattern.pattern_id}")
+                    self._debug(f"        Type: {pattern.transformation_type}")
+                    self._debug(f"        Operations: {pattern.grid_operations}")
+                    self._debug(f"        Confidence: {pattern.confidence:.3f}")
+                    self._debug(f"        Support: {len(pattern.supporting_demos)}/{len(self.demonstrations)} demos")
+            except Exception as e:
+                self._debug(f"    ✗ Pattern extraction failed: {e}")
+                patterns = []
 
             # Learn patterns in PAM
             for pattern in patterns:
@@ -120,6 +145,8 @@ class ARCCodeletFactory:
                         'type': pattern.transformation_type
                     }
                 )
+
+            self._debug(f"  [arc_analyze_demos] Completed ({len(patterns)} patterns found)")
 
         def _generate_pam_hypotheses():
             """Generate hypotheses via PAM spreading activation."""
@@ -268,13 +295,27 @@ class ARCCodeletFactory:
 
         def _select_winning_pattern():
             """Select winning pattern from coalition."""
+            self._debug("  [arc_select_winner] Selecting winning pattern")
+
             if not winning_coalition_id:
+                self._debug("    ⚠ No winning coalition ID provided")
                 return
 
+            self._debug(f"    Looking for coalition: {winning_coalition_id}")
+            self._debug(f"    Available hypotheses: {len(self.hypotheses)}")
+
             # Find hypothesis matching winning coalition
+            found = False
             for hyp in self.hypotheses:
+                self._debug(f"      Checking hypothesis: {hyp.hypothesis_id}")
                 if hyp.hypothesis_id == winning_coalition_id:
                     self.winning_pattern = hyp.pattern
+                    found = True
+
+                    self._debug(f"    ✓ Found matching pattern: {hyp.pattern.pattern_id}")
+                    self._debug(f"      Operations: {hyp.pattern.grid_operations}")
+                    self._debug(f"      Confidence: {hyp.pattern.confidence:.3f}")
+                    self._debug(f"      Validation accuracy: {hyp.validation_accuracy:.3f}")
 
                     # Store in workspace
                     self.workspace.upsert_object(
@@ -291,23 +332,47 @@ class ARCCodeletFactory:
                     )
                     break
 
+            if not found:
+                self._debug(f"    ⚠ No matching hypothesis found for coalition {winning_coalition_id}")
+
         def _apply_pattern_to_test():
             """Apply winning pattern to test input."""
-            if not self.winning_pattern or not self.test_input:
+            self._debug("  [arc_apply_pattern] Applying pattern to test input")
+
+            if not self.winning_pattern:
+                self._debug("    ⚠ No winning pattern to apply")
                 return
+
+            if not self.test_input:
+                self._debug("    ⚠ No test input provided")
+                return
+
+            self._debug(f"    Test input shape: {len(self.test_input)}x{len(self.test_input[0]) if self.test_input else 0}")
+            self._debug(f"    Applying {len(self.winning_pattern.grid_operations)} operations")
 
             result = self.test_input
 
             try:
                 # Apply pattern operations
-                for op_name in self.winning_pattern.grid_operations:
+                for i, op_name in enumerate(self.winning_pattern.grid_operations):
+                    self._debug(f"      Step {i+1}/{len(self.winning_pattern.grid_operations)}: {op_name}")
+
                     prim = self.primitives.get(op_name)
+                    if not prim:
+                        self._debug(f"        ✗ Primitive '{op_name}' not found")
+                        raise ValueError(f"Primitive '{op_name}' not found")
+
                     if op_name == 'recolor' and self.winning_pattern.color_mapping:
+                        self._debug(f"        Applying recolor with mapping: {self.winning_pattern.color_mapping}")
                         result = prim.execute(result, self.winning_pattern.color_mapping)
                     else:
                         result = prim.execute(result)
 
+                    self._debug(f"        ✓ Result shape: {len(result)}x{len(result[0]) if result else 0}")
+
                 self.final_output = result
+                self._debug(f"    ✓ Pattern applied successfully")
+                self._debug(f"      Final output shape: {len(result)}x{len(result[0]) if result else 0}")
 
                 # Store result in workspace
                 self.workspace.upsert_object(
@@ -318,6 +383,10 @@ class ARCCodeletFactory:
 
             except Exception as e:
                 # Pattern application failed
+                self._debug(f"    ✗ Pattern application failed: {e}")
+                import traceback
+                self._debug(f"      Stack trace: {traceback.format_exc()}")
+
                 self.workspace.upsert_object(
                     oid='test_output',
                     features={'applied': 0.0},

@@ -55,6 +55,7 @@ class ARCSolverConfig:
 
     # Logging
     verbose: bool = False
+    debug: bool = False  # Extra detailed logging
 
 
 class ARCCognitiveSolver:
@@ -88,7 +89,8 @@ class ARCCognitiveSolver:
             workspace=self.workspace,
             pam_integration=self.pam_integration,
             primitive_library=self.primitives,
-            analyzer=self.analyzer
+            analyzer=self.analyzer,
+            debug=self.config.debug
         )
 
         # Cognitive cycle engine
@@ -116,37 +118,81 @@ class ARCCognitiveSolver:
         if self.config.verbose:
             print(f"[ARCSolver] {msg}")
 
+    def _debug(self, msg: str):
+        """Log debug message if debug mode enabled."""
+        if self.config.debug:
+            print(f"[DEBUG] {msg}")
+
     def _setup_cycle_hooks(self):
         """Setup cognitive cycle phase hooks."""
 
         async def understanding_phase():
             """Understanding phase: analyze demonstrations and generate hypotheses."""
+            self._debug("=== UNDERSTANDING PHASE START ===")
+
             # Run understanding codelets
             codelets = self.codelet_factory.make_understanding_codelets()
+            self._debug(f"Created {len(codelets)} understanding codelets")
 
             for codelet in sorted(codelets, key=lambda c: c.urgency, reverse=True):
-                codelet.run()
+                self._debug(f"Running codelet: {codelet.name} (urgency={codelet.urgency})")
+                try:
+                    codelet.run()
+                    self._debug(f"  ✓ {codelet.name} completed")
+                except Exception as e:
+                    self._debug(f"  ✗ {codelet.name} failed: {e}")
 
-            self._log(f"Understanding: Generated {len(self.codelet_factory.hypotheses)} hypotheses")
+            hypotheses = self.codelet_factory.hypotheses
+            self._log(f"Understanding: Generated {len(hypotheses)} hypotheses")
+
+            if self.config.debug:
+                for i, hyp in enumerate(hypotheses):
+                    self._debug(f"  Hypothesis {i}: {hyp.pattern.pattern_id}")
+                    self._debug(f"    Operations: {hyp.pattern.grid_operations}")
+                    self._debug(f"    Salience: {hyp.salience:.3f}")
+                    self._debug(f"    Confidence: {hyp.pattern.confidence:.3f}")
+                    self._debug(f"    Support: {hyp.support_count} demos")
+
+            self._debug("=== UNDERSTANDING PHASE END ===")
 
         async def attention_phase():
             """Attention phase: validate hypotheses and compete for workspace."""
+            self._debug("=== ATTENTION PHASE START ===")
+
             # Run attention codelets
             codelets = self.codelet_factory.make_attention_codelets()
+            self._debug(f"Created {len(codelets)} attention codelets")
 
             for codelet in sorted(codelets, key=lambda c: c.urgency, reverse=True):
-                codelet.run()
+                self._debug(f"Running codelet: {codelet.name} (urgency={codelet.urgency})")
+                try:
+                    codelet.run()
+                    self._debug(f"  ✓ {codelet.name} completed")
+                except Exception as e:
+                    self._debug(f"  ✗ {codelet.name} failed: {e}")
 
             # Get coalitions
             coalitions = self.codelet_factory.get_coalitions()
+            self._debug(f"Created {len(coalitions)} coalitions")
 
             if coalitions:
+                if self.config.debug:
+                    for i, coalition in enumerate(coalitions):
+                        self._debug(f"  Coalition {i}: {coalition.id}")
+                        self._debug(f"    Summary: {coalition.summary}")
+                        self._debug(f"    Salience: {coalition.salience:.3f}")
+
                 # Compete in global workspace
                 winner, scores = self.global_workspace.compete(coalitions)
 
                 if winner:
                     self.winning_coalition_id = winner.id
                     self._log(f"Attention: Winner = {winner.summary} (salience={winner.salience:.3f})")
+
+                    if self.config.debug:
+                        self._debug("  Competition scores:")
+                        for cid, score in sorted(scores, key=lambda x: x[1], reverse=True):
+                            self._debug(f"    {cid}: {score:.3f}")
 
                     # Broadcast to workspace
                     conscious_content = self.global_workspace.broadcast(
@@ -155,6 +201,7 @@ class ARCCognitiveSolver:
                     )
 
                     if conscious_content:
+                        self._debug("  Broadcast conscious content to workspace")
                         # Store conscious content in workspace
                         self.workspace.upsert_object(
                             oid='conscious',
@@ -163,23 +210,43 @@ class ARCCognitiveSolver:
                         )
                 else:
                     self._log("Attention: No winner")
+                    self._debug("  ⚠ Global workspace competition produced no winner")
             else:
                 self._log("Attention: No coalitions")
+                self._debug("  ⚠ No coalitions created from hypotheses")
+
+            self._debug("=== ATTENTION PHASE END ===")
 
         async def action_phase():
             """Action phase: apply winning pattern and learn."""
+            self._debug("=== ACTION PHASE START ===")
+
             # Run action codelets
             codelets = self.codelet_factory.make_action_codelets(self.winning_coalition_id)
+            self._debug(f"Created {len(codelets)} action codelets")
+            self._debug(f"Winning coalition ID: {self.winning_coalition_id}")
 
             for codelet in sorted(codelets, key=lambda c: c.urgency, reverse=True):
-                codelet.run()
+                self._debug(f"Running codelet: {codelet.name} (urgency={codelet.urgency})")
+                try:
+                    codelet.run()
+                    self._debug(f"  ✓ {codelet.name} completed")
+                except Exception as e:
+                    self._debug(f"  ✗ {codelet.name} failed: {e}")
+                    import traceback
+                    if self.config.debug:
+                        self._debug(f"  Stack trace: {traceback.format_exc()}")
 
             output = self.codelet_factory.get_output()
             if output:
                 self._log(f"Action: Applied pattern, output shape={len(output)}x{len(output[0]) if output else 0}")
+                self._debug(f"  Output produced successfully")
+            else:
+                self._debug("  ⚠ No output produced")
 
             # Increment cycle count
             self.cycle_count += 1
+            self._debug("=== ACTION PHASE END ===")
 
         self.cycle_engine.on_understanding(understanding_phase)
         self.cycle_engine.on_attention(attention_phase)
