@@ -1,0 +1,59 @@
+{
+  "dataset": "training",
+  "total_tasks": 6,
+  "total_tests": 6,
+  "solved_tasks": 1,
+  "solve_rate": 0.16666666666666666,
+  "average_accuracy": 0.16666666666666666,
+  "average_time_ms": 51.16833799998707,
+  "task_results": [
+    {
+      "task_id": "00d62c1b",
+      "test_index": 0,
+      "solved": true,
+      "accuracy": 1.0,
+      "time_ms": 305.64417200002936,
+      "error": ""
+    },
+    {
+      "task_id": "1e0a9b12",
+      "test_index": 0,
+      "solved": false,
+      "accuracy": 0.0,
+      "time_ms": 0.49440199995842704,
+      "error": ""
+    },
+    {
+      "task_id": "2f876c35",
+      "test_index": 0,
+      "solved": false,
+      "accuracy": 0.0,
+      "time_ms": 0.263480999933563,
+      "error": ""
+    },
+    {
+      "task_id": "3c9b0459",
+      "test_index": 0,
+      "solved": false,
+      "accuracy": 0.0,
+      "time_ms": 0.2216220000264002,
+      "error": ""
+    },
+    {
+      "task_id": "4be741c5",
+      "test_index": 0,
+      "solved": false,
+      "accuracy": 0.0,
+      "time_ms": 0.2198769999495198,
+      "error": ""
+    },
+    {
+      "task_id": "5bd6f4ac",
+      "test_index": 0,
+      "solved": false,
+      "accuracy": 0.0,
+      "time_ms": 0.16647400002511858,
+      "error": ""
+    }
+  ]
+}
