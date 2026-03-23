@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arc-self-play"
+version = "0.1.0"
+description = "Adversarial puzzle generation and neural guidance for ARC-AGI"
+requires-python = ">=3.10"
+license = "MIT"
+
+dependencies = [
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+neural = [
+    "torch>=2.0",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[tool.setuptools.packages.find]
+include = ["arc_self_play*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
